@@ -5,9 +5,9 @@
 /dist/
 
 # Env files
-#.env
-#.env.*
-!.env.example
+.env
+.env.production
+.env.staging
 
 # Logs
 npm-debug.log*

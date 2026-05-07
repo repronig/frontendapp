@@ -1,0 +1,69 @@
+name: Deploy Frontend
+
+on:
+  push:
+    branches: [main, staging]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-frontend-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build (production)
+        if: github.ref_name == 'main'
+        env:
+          VITE_API_BASE_URL: ${{ secrets.VITE_API_BASE_URL_PROD }}
+          VITE_APP_NAME: ${{ secrets.VITE_APP_NAME_PROD }}
+          VITE_PAYSTACK_PUBLIC_KEY: ${{ secrets.VITE_PAYSTACK_PUBLIC_KEY_PROD }}
+          VITE_FLUTTERWAVE_PUBLIC_KEY: ${{ secrets.VITE_FLUTTERWAVE_PUBLIC_KEY_PROD }}
+        run: npm run build
+
+      - name: Build (staging)
+        if: github.ref_name == 'staging'
+        env:
+          VITE_API_BASE_URL: ${{ secrets.VITE_API_BASE_URL_STAGING }}
+          VITE_APP_NAME: ${{ secrets.VITE_APP_NAME_STAGING }}
+          VITE_PAYSTACK_PUBLIC_KEY: ${{ secrets.VITE_PAYSTACK_PUBLIC_KEY_STAGING }}
+          VITE_FLUTTERWAVE_PUBLIC_KEY: ${{ secrets.VITE_FLUTTERWAVE_PUBLIC_KEY_STAGING }}
+        run: npm run build
+
+      - name: Deploy production via FTP
+        if: github.ref_name == 'main'
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ${{ secrets.FTP_HOST_PROD }}
+          username: ${{ secrets.FTP_USERNAME_PROD }}
+          password: ${{ secrets.FTP_PASSWORD_PROD }}
+          port: ${{ secrets.FTP_PORT_PROD }}
+          local-dir: dist/
+          server-dir: /public_html/
+          dangerous-clean-slate: false
+
+      - name: Deploy staging via FTP
+        if: github.ref_name == 'staging'
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ${{ secrets.FTP_HOST_STAGING }}
+          username: ${{ secrets.FTP_USERNAME_STAGING }}
+          password: ${{ secrets.FTP_PASSWORD_STAGING }}
+          port: ${{ secrets.FTP_PORT_STAGING }}
+          local-dir: dist/
+          server-dir: /public_html/
+          dangerous-clean-slate: false
