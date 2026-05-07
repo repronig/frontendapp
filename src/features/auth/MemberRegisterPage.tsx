@@ -1,0 +1,94 @@
+import { Link, useNavigate } from 'react-router-dom';
+import { useQuery, useMutation } from '@tanstack/react-query';
+import { useForm, type Resolver } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { toast } from 'sonner';
+import { registerMember } from '@/features/auth/api';
+import { getPublicAssociations } from '@/features/public/api';
+import { applyServerValidationErrorsToForm } from '@/utils/formServerErrors';
+import { AuthCard } from '@/features/auth/AuthCard';
+import { Button } from '@/components/ui/button';
+import { FormField } from '@/components/shared/FormField';
+import { FormSelectField } from '@/components/shared/FormSelectField';
+import { TermsAgreementField } from '@/features/auth/TermsAgreementField';
+import { memberRegisterSchema, type MemberRegisterFormValues } from '@/features/auth/schemas';
+import { queryKeys } from '@/lib/queryKeys';
+
+export function MemberRegisterPage() {
+  const navigate = useNavigate();
+  const form = useForm<MemberRegisterFormValues>({
+    resolver: zodResolver(memberRegisterSchema) as Resolver<MemberRegisterFormValues>,
+    defaultValues: {
+      first_name: '',
+      last_name: '',
+      email: '',
+      phone: '',
+      password: '',
+      password_confirmation: '',
+      applicant_type: 'author',
+      association_id: 0,
+      accepted_terms: false,
+    },
+  });
+
+  const associationsQuery = useQuery({
+    queryKey: queryKeys.publicAssociationsRegister,
+    queryFn: () => getPublicAssociations({ per_page: 100 }),
+  });
+
+  const mutation = useMutation({
+    mutationFn: registerMember,
+    onSuccess: (response, values) => {
+      toast.success(response.message || 'Account created. Please verify the OTP sent to your email.');
+      navigate('/member/confirm-otp', { state: { email: values.email } });
+      form.reset();
+    },
+    onError: (error) => toast.error(applyServerValidationErrorsToForm(form, error)),
+  });
+
+  const isSubmitting = form.formState.isSubmitting || mutation.isPending;
+
+  const handleRegistrationSubmit = async (values: MemberRegisterFormValues) => {
+    await mutation.mutateAsync(values);
+  };
+
+  return (
+    <AuthCard mode="register" title="Member Registration" subtitle="Create a member account and begin onboarding.">
+      <div className="relative">
+        <form className="auth-register-form" onSubmit={form.handleSubmit(handleRegistrationSubmit)} aria-busy={isSubmitting}>
+          <FormField label="First name" requiredIndicator {...form.register('first_name')} error={form.formState.errors.first_name?.message} />
+          <FormField label="Last name" requiredIndicator {...form.register('last_name')} error={form.formState.errors.last_name?.message} />
+          <FormField label="Email" requiredIndicator type="email" {...form.register('email')} error={form.formState.errors.email?.message} />
+          <FormField label="Phone" requiredIndicator {...form.register('phone')} error={form.formState.errors.phone?.message} />
+          <div className="auth-register-form-span-2">
+            <FormSelectField label="Applicant type" requiredIndicator {...form.register('applicant_type')} error={form.formState.errors.applicant_type?.message}><option value="author">Author</option><option value="publisher">Publisher</option></FormSelectField>
+          </div>
+          <div className="auth-register-form-span-2">
+            <FormSelectField label="Association" requiredIndicator {...form.register('association_id')} error={form.formState.errors.association_id?.message}><option value="">Select an association</option>{associationsQuery.data?.data.map((association) => (<option key={association.id} value={association.id}>{association.name}</option>))}</FormSelectField>
+          </div>
+          <FormField label="Password" requiredIndicator type="password" {...form.register('password')} error={form.formState.errors.password?.message} />
+          <FormField label="Confirm password" requiredIndicator type="password" {...form.register('password_confirmation')} error={form.formState.errors.password_confirmation?.message} />
+          <div className="auth-register-form-span-2">
+            <TermsAgreementField audience="member" checked={form.watch('accepted_terms')} onChange={(checked) => form.setValue('accepted_terms', checked, { shouldValidate: true })} error={form.formState.errors.accepted_terms?.message} />
+          </div>
+          <div className="auth-register-form-span-2">
+            <Button className="w-full" size="lg" type="submit" disabled={isSubmitting}>
+              {isSubmitting ? 'Creating account...' : 'Create member account'}
+            </Button>
+          </div>
+        </form>
+        {isSubmitting ? (
+          <div className="absolute inset-0 z-50 flex items-center justify-center rounded-2xl bg-white/75 backdrop-blur-[1px] dark:bg-slate-950/60" aria-live="polite" aria-label="Creating account">
+            <div className="flex flex-col items-center gap-3 rounded-xl bg-white/90 px-6 py-5 shadow-lg dark:bg-slate-900/90">
+              <div className="h-11 w-11 animate-spin rounded-full border-4 border-[#7A1C1C] border-t-transparent" />
+              <p className="text-sm font-semibold text-[#7A1C1C] dark:text-[#F4C542]">Creating your account...</p>
+            </div>
+          </div>
+        ) : null}
+      </div>
+      <p className="mt-5 text-center text-sm text-[#6B788E] dark:text-slate-300">
+        Already have an account? <Link to="/member/login" className="font-semibold text-[#AF1512]">Login</Link>
+      </p>
+    </AuthCard>
+  );
+}

@@ -1,0 +1,261 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Montserrat:wght@400;500;600;700&display=swap');
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+:root {
+  --background: #FDFDFD;
+  --foreground: #1E2024;
+  --card: #FFFFFF;
+  --card-foreground: #1E2024;
+  --popover: #FFFFFF;
+  --popover-foreground: #1E2024;
+  --primary: #AF1512;
+  --primary-foreground: #FFFFFF;
+  --secondary: #FCFCF7;
+  --secondary-foreground: #484848;
+  --muted: #F6F7F8;
+  --muted-foreground: #6B788E;
+  --accent: #6A1025;
+  --accent-foreground: #FFFFFF;
+  --border: #EAECF0;
+  --input: #222222;
+  --ring: #AF1512;
+  --radius: 6px;
+  --sidebar: #FCFCF7;
+  --page-title: #2B2B2D;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-border: var(--border);
+  --radius-sm: calc(var(--radius) - 2px);
+  --radius-md: var(--radius);
+  --radius-lg: var(--radius);
+  --font-sans: 'Montserrat', ui-sans-serif, system-ui, sans-serif;
+  --font-heading: 'Inter', ui-sans-serif, system-ui, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-sans);
+  background: linear-gradient(180deg, #fdfdfd 0%, #fafaf8 100%);
+  color: var(--foreground);
+  text-rendering: optimizeLegibility;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: var(--font-heading);
+  color: var(--page-title);
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+
+::selection {
+  background: rgba(175, 21, 18, 0.16);
+}
+
+.enterprise-shadow {
+  box-shadow: 0 18px 45px rgba(16, 24, 40, 0.08);
+}
+
+.panel-shadow {
+  box-shadow: 0 8px 24px rgba(16, 24, 40, 0.04);
+}
+
+.glass-overlay {
+  background: rgba(18, 24, 38, 0.42);
+  backdrop-filter: blur(5px);
+}
+
+.auth-backdrop {
+  background-image:
+    linear-gradient(90deg, rgba(9, 19, 45, 0.88) 0%, rgba(9, 19, 45, 0.62) 40%, rgba(175, 21, 18, 0.18) 100%),
+    url('/assets/auth-login.jpg');
+  background-size: cover;
+  background-position: center;
+}
+
+.auth-register-backdrop {
+  background-image:
+    linear-gradient(90deg, rgba(9, 19, 45, 0.88) 0%, rgba(9, 19, 45, 0.62) 40%, rgba(175, 21, 18, 0.18) 100%),
+    url('/assets/auth-register.jpg');
+  background-size: cover;
+  background-position: center;
+}
+
+/* Member / institution registration: explicit grid so two-column layout always applies
+   (not only when Tailwind emits responsive utilities; avoids stale lazy-chunk styling). */
+.auth-register-form {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: 1fr;
+}
+
+@media (min-width: 640px) {
+  .auth-register-form {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.auth-register-form > .auth-register-form-span-2 {
+  grid-column: 1 / -1;
+}
+
+.grid-pattern {
+  background-image: linear-gradient(rgba(234, 236, 240, 0.7) 1px, transparent 1px), linear-gradient(90deg, rgba(234, 236, 240, 0.7) 1px, transparent 1px);
+  background-size: 28px 28px;
+}
+
+.page-container {
+  width: 100%;
+  max-width: 1600px;
+  margin: 0 auto;
+}
+
+.surface-muted {
+  background: linear-gradient(180deg, rgba(252, 252, 247, 0.95) 0%, rgba(255, 255, 255, 0.95) 100%);
+}
+
+.scrollbar-thin {
+  scrollbar-width: thin;
+  scrollbar-color: #d1d5db transparent;
+}
+
+.scrollbar-thin::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background: #d1d5db;
+  border-radius: 999px;
+}
+
+body.dark-mode {
+  --background: #0F172A;
+  --foreground: #E5E7EB;
+  --card: #111827;
+  --card-foreground: #E5E7EB;
+  --popover: #111827;
+  --popover-foreground: #E5E7EB;
+  --secondary: #101828;
+  --secondary-foreground: #E5E7EB;
+  --muted: #1F2937;
+  --muted-foreground: #94A3B8;
+  --border: #334155;
+  --page-title: #F8FAFC;
+  background: linear-gradient(180deg, #0f172a 0%, #111827 100%);
+  color: var(--foreground);
+}
+
+body.dark-mode .dark-theme-shell,
+body.dark-mode .dark-theme-shell aside,
+body.dark-mode .dark-theme-shell header,
+body.dark-mode .dark-theme-shell main,
+body.dark-mode .card,
+body.dark-mode [class*='bg-white'],
+body.dark-mode [class*='bg-\[#FCFCF7\]'],
+body.dark-mode [class*='bg-\[#FDFDFD\]'] {
+  color: #E5E7EB;
+}
+
+body.dark-mode .dark-theme-shell {
+  background: #0F172A !important;
+}
+
+body.dark-mode .dark-theme-shell aside {
+  background: #111827 !important;
+  border-color: #334155 !important;
+}
+
+body.dark-mode .dark-theme-shell header {
+  background: rgba(15, 23, 42, 0.92) !important;
+  border-color: #334155 !important;
+}
+
+body.dark-mode .dark-theme-shell main {
+  background: transparent !important;
+}
+
+body.dark-mode .dark-theme-shell .panel-shadow,
+body.dark-mode .dark-theme-shell .enterprise-shadow,
+body.dark-mode .dark-theme-shell .card,
+body.dark-mode .dark-theme-shell table,
+body.dark-mode .dark-theme-shell [class*='bg-white'],
+body.dark-mode .dark-theme-shell [class*='bg-\[#FCFCF7\]'] {
+  background-color: #111827 !important;
+  border-color: #334155 !important;
+  color: #E5E7EB !important;
+}
+
+body.dark-mode .dark-theme-shell input,
+body.dark-mode .dark-theme-shell textarea,
+body.dark-mode .dark-theme-shell select,
+body.dark-mode .dark-theme-shell button {
+  border-color: #334155;
+}
+
+body.dark-mode .dark-theme-shell input,
+body.dark-mode .dark-theme-shell textarea,
+body.dark-mode .dark-theme-shell select {
+  background: #0F172A !important;
+  color: #E5E7EB !important;
+}
+
+body.dark-mode .dark-theme-shell th,
+body.dark-mode .dark-theme-shell td,
+body.dark-mode .dark-theme-shell p,
+body.dark-mode .dark-theme-shell span,
+body.dark-mode .dark-theme-shell h1,
+body.dark-mode .dark-theme-shell h2,
+body.dark-mode .dark-theme-shell h3,
+body.dark-mode .dark-theme-shell h4,
+body.dark-mode .dark-theme-shell h5,
+body.dark-mode .dark-theme-shell h6,
+body.dark-mode .dark-theme-shell label,
+body.dark-mode .dark-theme-shell div {
+  border-color: inherit;
+}
+
+body.dark-mode .dark-theme-shell .text-\[\#6B788E\],
+body.dark-mode .dark-theme-shell .text-\[\#667085\],
+body.dark-mode .dark-theme-shell .text-\[\#98A2B3\],
+body.dark-mode .dark-theme-shell .text-slate-500,
+body.dark-mode .dark-theme-shell .text-slate-600,
+body.dark-mode .dark-theme-shell .text-slate-700 {
+  color: #94A3B8 !important;
+}
