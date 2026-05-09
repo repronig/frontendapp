@@ -295,7 +295,7 @@ export function MemberApplicationPage() {
     <div className="space-y-6">
       <SectionHeader
         title="Membership and Mandate"
-        description="Steps to submit your application."
+        description="Fill and submit your application."
         actions={application ? <div className="flex items-center gap-2"><StatusBadge value={application.application_status} />{application.application_reference ? <span className="text-xs text-slate-500">Ref: {application.application_reference}</span> : null}</div> : null}
       />
 
