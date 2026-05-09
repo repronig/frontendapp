@@ -89,7 +89,11 @@ export function AssociationApplicationsPage() {
   });
 
   const application = detailQuery.data?.data ?? null;
-  const canReview = Boolean(application && reviewableStatuses.has(application.application_status));
+  const affiliationPending =
+    application?.affiliation_status == null || application.affiliation_status === 'pending';
+  const canReview = Boolean(
+    application && reviewableStatuses.has(application.application_status) && affiliationPending,
+  );
 
   const approveForm = useForm<ApproveAssociationApplicationFormValues>({
     resolver: zodResolver(approveAssociationApplicationSchema),
@@ -100,13 +104,14 @@ export function AssociationApplicationsPage() {
     defaultValues: { reason: '' },
   });
 
-  function handleSuccess(message: string) {
+  function handleAffiliationDecisionSuccess(message: string, applicationId: number) {
     toast.success(message);
     queryClient.invalidateQueries({ queryKey: queryKeys.associationApplications });
-    queryClient.invalidateQueries({ queryKey: queryKeys.associationApplication(selectedId) });
+    queryClient.invalidateQueries({ queryKey: queryKeys.associationApplication(applicationId) });
     queryClient.invalidateQueries({ queryKey: queryKeys.currentUser });
     approveForm.reset({ comment: '' });
     rejectForm.reset({ reason: '' });
+    setSelectedId(null);
   }
 
   const approveMutation = useMutation({
@@ -114,7 +119,9 @@ export function AssociationApplicationsPage() {
       if (!application) throw new Error('Select an application first.');
       return validateAssociationAffiliation(application.id, values.comment || undefined);
     },
-    onSuccess: (response) => handleSuccess(response.message),
+    onSuccess: (response) => {
+      if (application) handleAffiliationDecisionSuccess(response.message, application.id);
+    },
     onError: onMutationApiError(),
   });
 
@@ -123,9 +130,13 @@ export function AssociationApplicationsPage() {
       if (!application) throw new Error('Select an application first.');
       return rejectAssociationAffiliation(application.id, values.reason);
     },
-    onSuccess: (response) => handleSuccess(response.message),
+    onSuccess: (response) => {
+      if (application) handleAffiliationDecisionSuccess(response.message, application.id);
+    },
     onError: onMutationApiError(),
   });
+
+  const reviewBusy = approveMutation.isPending || rejectMutation.isPending;
 
   return (
     <>
@@ -207,19 +218,26 @@ export function AssociationApplicationsPage() {
         {application ? (
           <AssociationApplicationDetail application={application}>
             <div className="space-y-8">
-              <SectionHeader title="Affiliation review actions" description="Association validates or rejects affiliation only." />
+             
               {!canReview ? (
                 <Alert title="Review actions unavailable" description="This application is not in a reviewable state right now. You can still inspect the details above." />
               ) : null}
 
               <ModalFormSection badge="1" title="Validate affiliation" description="Confirm this applicant is affiliated with your association.">
                 <form className="space-y-4" onSubmit={approveForm.handleSubmit((values) => approveMutation.mutate(values))}>
-                  <FormTextareaField label="Optional comment" error={approveForm.formState.errors.comment?.message} disabled={!canReview} {...approveForm.register('comment')} />
-                  <Button type="submit" className={approvalActionButtonClass} disabled={!canReview || approveMutation.isPending}>{approveMutation.isPending ? 'Validating...' : 'Validate affiliation'}</Button>
+                  <FormTextareaField
+                    label="Optional comment"
+                    error={approveForm.formState.errors.comment?.message}
+                    disabled={!canReview || reviewBusy}
+                    {...approveForm.register('comment')}
+                  />
+                  <Button type="submit" className={approvalActionButtonClass} disabled={!canReview || reviewBusy}>
+                    {approveMutation.isPending ? 'Validating...' : 'Validate affiliation'}
+                  </Button>
                 </form>
               </ModalFormSection>
 
-              <ModalFormSection badge="2" title="Reject affiliation" description="Mark affiliation as rejected. Admin still takes the final application decision.">
+              <ModalFormSection badge="2" title="Reject affiliation" description="Mark affiliation as rejected.">
                 <form
                   className="space-y-4"
                   onSubmit={rejectForm.handleSubmit((values) => {
@@ -230,10 +248,17 @@ export function AssociationApplicationsPage() {
                 >
                   <Alert
                     title="Affiliation outcome only"
-                    description='This only records the association affiliation outcome. Admin will still complete the final member application decision.'
+                    description=''
                   />
-                  <FormTextareaField label="Reason" error={rejectForm.formState.errors.reason?.message} disabled={!canReview} {...rejectForm.register('reason')} />
-                  <Button type="submit" variant="destructive" disabled={!canReview || rejectMutation.isPending}>{rejectMutation.isPending ? 'Rejecting...' : 'Reject affiliation'}</Button>
+                  <FormTextareaField
+                    label="Reason"
+                    error={rejectForm.formState.errors.reason?.message}
+                    disabled={!canReview || reviewBusy}
+                    {...rejectForm.register('reason')}
+                  />
+                  <Button type="submit" variant="destructive" disabled={!canReview || reviewBusy}>
+                    {rejectMutation.isPending ? 'Rejecting...' : 'Reject affiliation'}
+                  </Button>
                 </form>
               </ModalFormSection>
             </div>

@@ -386,8 +386,8 @@ export function MemberApplicationPage() {
           <label className="flex items-center gap-2 md:col-span-2 text-sm font-medium text-slate-700 dark:text-slate-300"><input type="checkbox" className="h-4 w-4 rounded border-slate-300" disabled={!canEdit} {...form.register('is_diaspora')} />I am applying from the diaspora</label>
 
           <label className="block space-y-2 md:col-span-2">
-            <FieldLabel>Your member / reference ID (optional)</FieldLabel>
-            <Input placeholder="e.g. legacy society number or NIN" disabled={!canEdit} {...form.register('member_provided_id')} />
+            <FieldLabel>Your Association member / reference ID (optional)</FieldLabel>
+            <Input placeholder="e.g. Association ID" disabled={!canEdit} {...form.register('member_provided_id')} />
             <p className="text-xs text-slate-500 dark:text-slate-400">If your institution or society gave you an ID, enter it here so reviewers can match your record.</p>
             <FieldError message={form.formState.errors.member_provided_id?.message} />
           </label>
