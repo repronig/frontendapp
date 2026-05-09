@@ -437,7 +437,7 @@ export function MemberApplicationPage() {
             <Button type="button" className="border-[#D4AF37] bg-[#D4AF37] text-[#7A1F1A] hover:bg-[#C9A227] hover:text-[#7A1F1A]" disabled={!canSubmit || submitMutation.isPending} onClick={() => submitMutation.mutate()} title={!hasAllKycDocuments ? 'Upload all application documents before submitting.' : undefined}>{submitMutation.isPending ? 'Submitting...' : 'Submit application'}</Button>
             {application?.application_status === 'approved' ? (
               <Button type="button" variant="outline" disabled={mandateDownloadMutation.isPending} onClick={() => mandateDownloadMutation.mutate()}>
-                {mandateDownloadMutation.isPending ? 'Downloading...' : 'Download mandate form data'}
+                {mandateDownloadMutation.isPending ? 'Downloading...' : 'Download Mandate'}
               </Button>
             ) : null}
           </PortalFormFooter>
