@@ -55,14 +55,14 @@ export function VerifyEmailPage() {
     <div className="mx-auto flex min-h-screen max-w-3xl items-center px-4 py-10 sm:px-6 lg:px-8">
       <Card className="w-full">
         <h1 className="text-2xl font-semibold text-slate-900 dark:text-slate-50">Verify your email</h1>
-        <div className="mt-2 space-y-2 text-sm text-slate-600"><p>Protected portals remain blocked until the backend reports your email as verified.</p><p>Verification currently depends on an authenticated session, so open the email link while signed in or log in first before retrying the signed verification link.</p></div>
+        <div className="mt-2 space-y-2 text-sm text-slate-600"><p>Your email is verified using an email verification OTP.</p><p>If you did not receive the code, resend email verification OTP and continue on the OTP form page.</p></div>
         <div className="mt-6 space-y-4">
           <div className="rounded-xl bg-slate-50 dark:bg-slate-900 p-4 text-sm text-slate-700 dark:text-slate-300">
             <p><span className="font-medium">Email:</span> {statusQuery.data?.data.email || '—'}</p>
             <p className="mt-1"><span className="font-medium">Verified:</span> {statusQuery.data?.data.email_verified ? 'Yes' : 'No'}</p>
           </div>
           <Button onClick={() => resendMutation.mutate()} disabled={resendMutation.isPending || !token}>
-            {resendMutation.isPending ? 'Sending...' : 'Resend verification email'}
+            {resendMutation.isPending ? 'Sending...' : 'Resend email verification OTP'}
           </Button>
         </div>
       </Card>

@@ -253,6 +253,11 @@ export async function resendVerificationEmail() {
   return data;
 }
 
+// OTP-named aliases for newer callers.
+export const getOtpVerificationStatus = getEmailVerificationStatus;
+export const verifyOtpWithSignedUrl = verifyEmailWithSignedUrl;
+export const resendOtpVerification = resendVerificationEmail;
+
 export async function forgotPassword(payload: ForgotPasswordPayload) {
   const { data } = await apiClient.post<ApiSuccess<null>>('/auth/forgot-password', payload);
   return data;

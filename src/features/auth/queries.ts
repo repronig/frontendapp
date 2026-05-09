@@ -4,6 +4,7 @@ import { queryKeys } from '@/lib/queryKeys';
 export const authQueryKeys = {
   currentUser: queryKeys.currentUser,
   emailVerificationStatus: queryKeys.emailVerificationStatus,
+  otpVerificationStatus: queryKeys.emailVerificationStatus,
   meNotificationPreferences: queryKeys.meNotificationPreferences,
   meTwoFactor: queryKeys.meTwoFactor,
   meSecurityActivity: queryKeys.meSecurityActivity,

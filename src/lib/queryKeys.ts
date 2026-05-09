@@ -152,6 +152,7 @@ export const queryKeys = {
   publicAssociationsBrowse: ['public-associations'] as const,
 
   emailVerificationStatus: ['email-verification-status'] as const,
+  otpVerificationStatus: ['email-verification-status'] as const,
 };
 
 /** Paged/filtered notifications inbox (`NotificationsPage`). */
