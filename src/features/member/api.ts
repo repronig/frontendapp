@@ -105,7 +105,10 @@ export async function submitMemberApplication(memberApplicationId: number) {
 }
 
 export async function downloadMemberApplicationMandate(memberApplicationId: number) {
-  return apiClient.get<Blob>(`/member-applications/${memberApplicationId}/mandate`, { responseType: 'blob' });
+  return apiClient.get<Blob>(`/member-applications/${memberApplicationId}/mandate`, {
+    responseType: 'blob',
+    headers: { Accept: 'application/pdf' },
+  });
 }
 
 export async function uploadMemberApplicationDocument(memberApplicationId: number, payload: { document_type: string; file: File }) {

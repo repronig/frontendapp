@@ -26,7 +26,7 @@ import { mergedFirstLastFromUsers } from '@/utils/userNamesFromUser';
 import { FormField } from '@/components/shared/FormField';
 import { useAuthStore } from '@/store/auth.store';
 import { queryKeys } from '@/lib/queryKeys';
-import { triggerBlobDownload } from '@/utils/download';
+import { parseFilenameFromContentDisposition, triggerBlobDownload } from '@/utils/download';
 
 const applicantTypeOptions = [
   { label: 'Author', value: 'author' },
@@ -266,15 +266,17 @@ export function MemberApplicationPage() {
   });
 
   const mandateDownloadMutation = useMutation({
-    mutationFn: async () => {
-      if (!application) throw new Error('No application available.');
-      return downloadMemberApplicationMandate(application.id);
-    },
-    onSuccess: (response) => {
-      const disposition = String(response.headers['content-disposition'] ?? '');
-      const filename = disposition.match(/filename="?([^";]+)"?/i)?.[1] ?? 'member_application_mandate.txt';
-      triggerBlobDownload(response.data, filename);
-      toast.success('Mandate form downloaded.');
+    mutationFn: async (app: NonNullable<typeof application>) => downloadMemberApplicationMandate(app.id),
+    onSuccess: (response, app) => {
+      const disposition = String(
+        response.headers['content-disposition'] ?? (response.headers as Record<string, string>)['Content-Disposition'] ?? '',
+      );
+      const fromHeader = parseFilenameFromContentDisposition(disposition);
+      const ref = (app.application_reference ?? `id-${app.id}`).replace(/[^\w.-]+/g, '-');
+      const fallbackPdf = `repronig-member-mandate-${ref}.pdf`;
+      const filename = fromHeader && fromHeader.toLowerCase().endsWith('.pdf') ? fromHeader : fallbackPdf;
+      triggerBlobDownload(response.data as Blob, filename);
+      toast.success('Mandate PDF downloaded.');
     },
     onError: onMutationApiError(),
   });
@@ -436,7 +438,14 @@ export function MemberApplicationPage() {
             <Button type="submit" disabled={!canEdit || saveMutation.isPending}>{saveMutation.isPending ? 'Saving...' : application ? 'Update application' : 'Create application'}</Button>
             <Button type="button" className="border-[#D4AF37] bg-[#D4AF37] text-[#7A1F1A] hover:bg-[#C9A227] hover:text-[#7A1F1A]" disabled={!canSubmit || submitMutation.isPending} onClick={() => submitMutation.mutate()} title={!hasAllKycDocuments ? 'Upload all application documents before submitting.' : undefined}>{submitMutation.isPending ? 'Submitting...' : 'Submit application'}</Button>
             {application?.application_status === 'approved' ? (
-              <Button type="button" variant="outline" disabled={mandateDownloadMutation.isPending} onClick={() => mandateDownloadMutation.mutate()}>
+              <Button
+                type="button"
+                variant="outline"
+                disabled={mandateDownloadMutation.isPending || !application}
+                onClick={() => {
+                  if (application) mandateDownloadMutation.mutate(application);
+                }}
+              >
                 {mandateDownloadMutation.isPending ? 'Downloading...' : 'Download Mandate'}
               </Button>
             ) : null}

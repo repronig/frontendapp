@@ -456,8 +456,6 @@ export function AdminMembershipPage({ initialTab = 'members', institutionOnly = 
 
   const approveApplicationMutation = useMutation({
     mutationFn: async (application: MemberApplicationResource) => {
-      const confirmed = await confirmAdminSensitiveAction({ title: 'Confirm member approval', description: 'Approving this application creates/updates a member account.', confirmLabel: 'Approve member application' });
-      if (!confirmed) throw new Error('Security confirmation cancelled.');
       return approveAdminMemberApplication(application.id);
     },
     onSuccess: async (response) => {
@@ -471,8 +469,6 @@ export function AdminMembershipPage({ initialTab = 'members', institutionOnly = 
 
   const rejectApplicationMutation = useMutation({
     mutationFn: async ({ application, reason }: { application: MemberApplicationResource; reason?: string }) => {
-      const confirmed = await confirmAdminSensitiveAction({ title: 'Confirm member rejection', description: 'Rejecting this application sends member notifications and finalizes the review.', confirmLabel: 'Reject member application' });
-      if (!confirmed) throw new Error('Security confirmation cancelled.');
       return rejectAdminMemberApplication(application.id, { reason: reason ?? '' });
     },
     onSuccess: async (response) => {
@@ -486,8 +482,6 @@ export function AdminMembershipPage({ initialTab = 'members', institutionOnly = 
 
   const requestChangesApplicationMutation = useMutation({
     mutationFn: async ({ application, comment }: { application: MemberApplicationResource; comment?: string }) => {
-      const confirmed = await confirmAdminSensitiveAction({ title: 'Confirm request changes', description: 'This returns the application to the member for updates and notifies them.', confirmLabel: 'Request changes' });
-      if (!confirmed) throw new Error('Security confirmation cancelled.');
       return requestChangesAdminMemberApplication(application.id, { comment: comment ?? '' });
     },
     onSuccess: async (response) => {
