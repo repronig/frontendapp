@@ -19,7 +19,7 @@ import { SectionHeader } from '@/components/shared/SectionHeader';
 import { StatusBadge } from '@/components/shared/StatusBadge';
 import { approvalActionButtonClass } from '@/components/shared/tableActionStyles';
 import { StatusHelperGrid } from '@/components/shared/StatusHelperGrid';
-import { approveAdminInstitution, deactivateAdminInstitution, downloadAdminInstitutionsExport, downloadAdminMembersExport, getAdminInstitution, getAdminMember, getAdminMemberApplication, listAdminInstitutions, listAdminMemberApplications, listAdminMembers, listAdminTimeline, reactivateAdminInstitution, rejectAdminInstitution } from '@/features/admin/api';
+import { approveAdminInstitution, approveAdminMemberApplication, deactivateAdminInstitution, downloadAdminInstitutionsExport, downloadAdminMembersExport, getAdminInstitution, getAdminMember, getAdminMemberApplication, listAdminInstitutions, listAdminMemberApplications, listAdminMembers, listAdminTimeline, reactivateAdminInstitution, rejectAdminInstitution, rejectAdminMemberApplication, requestChangesAdminMemberApplication } from '@/features/admin/api';
 import { usePaginatedList } from '@/hooks/usePaginatedList';
 import type { AssociationResource, InstitutionProfileResource, MemberApplicationResource, MemberProfileResource, UserResource } from '@/types/domain';
 import { confirmAdminSensitiveAction } from '@/features/admin/security';
@@ -33,6 +33,7 @@ import { toast } from 'sonner';
 
 type Tab = 'members' | 'applications' | 'institutions';
 type InstitutionAction = 'approve' | 'reject' | 'deactivate' | 'reactivate' | null;
+type ApplicationAction = 'approve' | 'reject' | 'request_changes' | null;
 
 
 function missingKycDocumentLabels(institution?: InstitutionProfileResource | null) {
@@ -336,6 +337,7 @@ export function AdminMembershipPage({ initialTab = 'members', institutionOnly = 
   const [modalOpen, setModalOpen] = useState(false);
   const [institutionAction, setInstitutionAction] = useState<InstitutionAction>(null);
   const [documentLightbox, setDocumentLightbox] = useState<{ title: string; url: string; fileName?: string | null } | null>(null);
+  const [applicationAction, setApplicationAction] = useState<ApplicationAction>(null);
   const [isExporting, setIsExporting] = useState(false);
 
   const tabs = useMemo(() => (
@@ -421,6 +423,48 @@ export function AdminMembershipPage({ initialTab = 'members', institutionOnly = 
     },
     onSuccess: async (response) => actionSuccess(response.message),
     onError: (error) => showAdminActionError(error, 'The institution action could not be completed.'),
+  });
+
+  const approveApplicationMutation = useMutation({
+    mutationFn: async (application: MemberApplicationResource) => {
+      const confirmed = await confirmAdminSensitiveAction({ title: 'Confirm member approval', description: 'Approving this application creates/updates a member account.', confirmLabel: 'Approve member application' });
+      if (!confirmed) throw new Error('Security confirmation cancelled.');
+      return approveAdminMemberApplication(application.id);
+    },
+    onSuccess: async (response) => {
+      showAdminActionSuccess(response.message);
+      await Promise.all([appsQuery.refetch(), appDetailQuery.refetch()]);
+      setApplicationAction(null);
+    },
+    onError: (error) => showAdminActionError(error, 'The application action could not be completed.'),
+  });
+
+  const rejectApplicationMutation = useMutation({
+    mutationFn: async ({ application, reason }: { application: MemberApplicationResource; reason?: string }) => {
+      const confirmed = await confirmAdminSensitiveAction({ title: 'Confirm member rejection', description: 'Rejecting this application sends member notifications and finalizes the review.', confirmLabel: 'Reject member application' });
+      if (!confirmed) throw new Error('Security confirmation cancelled.');
+      return rejectAdminMemberApplication(application.id, { reason: reason ?? '' });
+    },
+    onSuccess: async (response) => {
+      showAdminActionSuccess(response.message);
+      await Promise.all([appsQuery.refetch(), appDetailQuery.refetch()]);
+      setApplicationAction(null);
+    },
+    onError: (error) => showAdminActionError(error, 'The application action could not be completed.'),
+  });
+
+  const requestChangesApplicationMutation = useMutation({
+    mutationFn: async ({ application, comment }: { application: MemberApplicationResource; comment?: string }) => {
+      const confirmed = await confirmAdminSensitiveAction({ title: 'Confirm request changes', description: 'This returns the application to the member for updates and notifies them.', confirmLabel: 'Request changes' });
+      if (!confirmed) throw new Error('Security confirmation cancelled.');
+      return requestChangesAdminMemberApplication(application.id, { comment: comment ?? '' });
+    },
+    onSuccess: async (response) => {
+      showAdminActionSuccess(response.message);
+      await Promise.all([appsQuery.refetch(), appDetailQuery.refetch()]);
+      setApplicationAction(null);
+    },
+    onError: (error) => showAdminActionError(error, 'The application action could not be completed.'),
   });
 
   function openModal(id: number) {
@@ -529,7 +573,22 @@ export function AdminMembershipPage({ initialTab = 'members', institutionOnly = 
       <Modal open={modalOpen} onClose={() => setModalOpen(false)} title={tab === 'applications' ? 'Member application details' : tab === 'members' ? 'Member details' : 'Institution details'} subtitle="">
         {detailData ? (
           <div className="space-y-5">
-            {tab === 'applications' ? renderApplicationDetail(detailData as MemberApplicationResource) : null}
+            {tab === 'applications' ? (
+              <div className="space-y-4">
+                {renderApplicationDetail(detailData as MemberApplicationResource)}
+                {(detailData as MemberApplicationResource).application_status === 'submitted' ? (
+                  <div className="rounded-2xl border border-[#EAECF0] p-4">
+                    <p className="text-sm font-semibold text-[#101828]">Admin final decision</p>
+                    <p className="mt-1 text-sm text-[#667085]">Association affiliation has been reviewed. Complete the final member application decision.</p>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      <Button className={approvalActionButtonClass} onClick={() => setApplicationAction('approve')}>Approve application</Button>
+                      <Button variant="outline" onClick={() => setApplicationAction('request_changes')}>Request changes</Button>
+                      <Button variant="destructive" onClick={() => setApplicationAction('reject')}>Reject application</Button>
+                    </div>
+                  </div>
+                ) : null}
+              </div>
+            ) : null}
             {tab === 'members' ? (
               <div className="space-y-5">
                 {renderMemberDetail(detailData as MemberProfileResource)}
@@ -573,6 +632,9 @@ export function AdminMembershipPage({ initialTab = 'members', institutionOnly = 
       <ActionDialog open={institutionAction === 'reject'} onClose={() => setInstitutionAction(null)} title="Reject institution" description="Reject this institution and record a reason for the decision." actionLabel="Reject institution" actionVariant="destructive" showReason onConfirm={(reason) => { if (institutionDetail) rejectMutation.mutate({ institution: institutionDetail, reason }); }} isSubmitting={rejectMutation.isPending} />
       <ActionDialog open={institutionAction === 'deactivate'} onClose={() => setInstitutionAction(null)} title="Deactivate institution" description="Deactivate this institution account and capture a governance reason." actionLabel="Deactivate institution" actionVariant="destructive" showReason onConfirm={(reason) => { if (institutionDetail) deactivateMutation.mutate({ institution: institutionDetail, reason }); }} isSubmitting={deactivateMutation.isPending} />
       <ActionDialog open={institutionAction === 'reactivate'} onClose={() => setInstitutionAction(null)} title="Reactivate institution" description="Restore institution access and clear the current deactivation state." actionLabel="Reactivate institution" showReason onConfirm={(reason) => { if (institutionDetail) reactivateMutation.mutate({ institution: institutionDetail, reason }); }} isSubmitting={reactivateMutation.isPending} />
+      <ActionDialog open={applicationAction === 'approve'} onClose={() => setApplicationAction(null)} title="Approve member application" description="Approve this member application and activate the member account." actionLabel="Approve application" onConfirm={() => { if (appDetailQuery.data?.data) approveApplicationMutation.mutate(appDetailQuery.data.data); }} isSubmitting={approveApplicationMutation.isPending} />
+      <ActionDialog open={applicationAction === 'request_changes'} onClose={() => setApplicationAction(null)} title="Request changes" description="Request updates from the member before final approval." actionLabel="Request changes" showReason onConfirm={(comment) => { if (appDetailQuery.data?.data) requestChangesApplicationMutation.mutate({ application: appDetailQuery.data.data, comment }); }} isSubmitting={requestChangesApplicationMutation.isPending} />
+      <ActionDialog open={applicationAction === 'reject'} onClose={() => setApplicationAction(null)} title="Reject member application" description="Reject this member application with a reason." actionLabel="Reject application" actionVariant="destructive" showReason onConfirm={(reason) => { if (appDetailQuery.data?.data) rejectApplicationMutation.mutate({ application: appDetailQuery.data.data, reason }); }} isSubmitting={rejectApplicationMutation.isPending} />
     </div>
   );
 }

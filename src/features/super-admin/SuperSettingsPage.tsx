@@ -65,6 +65,8 @@ type SettingsFormState = {
     password_min_length: string;
     force_https: boolean;
     audit_logging_enabled: boolean;
+    otp_email_enabled: boolean;
+    otp_sms_enabled: boolean;
   };
 };
 
@@ -142,6 +144,8 @@ function toFormState(settings?: SettingsPayload): SettingsFormState {
       password_min_length: String(security.password_min_length ?? 8),
       force_https: Boolean(security.force_https),
       audit_logging_enabled: Boolean(security.audit_logging_enabled),
+      otp_email_enabled: security.otp_email_enabled !== false,
+      otp_sms_enabled: Boolean(security.otp_sms_enabled),
     },
   };
 }
@@ -340,6 +344,8 @@ export function SuperSettingsPage() {
         password_min_length: Number(form.security.password_min_length || 0),
         force_https: form.security.force_https,
         audit_logging_enabled: form.security.audit_logging_enabled,
+        otp_email_enabled: form.security.otp_email_enabled,
+        otp_sms_enabled: form.security.otp_sms_enabled,
       },
     }),
     onSuccess: (response) => {
@@ -587,6 +593,39 @@ export function SuperSettingsPage() {
             <FormField label="Password minimum length" requiredIndicator value={form.security.password_min_length} onChange={(event) => setForm((current) => ({ ...current, security: { ...current.security, password_min_length: event.target.value } }))} />
             <ToggleRow label="Force HTTPS" checked={form.security.force_https} onChange={(checked) => setForm((current) => ({ ...current, security: { ...current.security, force_https: checked } }))} />
             <ToggleRow label="Audit logging enabled" checked={form.security.audit_logging_enabled} onChange={(checked) => setForm((current) => ({ ...current, security: { ...current.security, audit_logging_enabled: checked } }))} />
+            <ToggleRow
+              label="OTP via email"
+              helpText="Send authentication OTP codes to user email addresses."
+              checked={form.security.otp_email_enabled}
+              onChange={(checked) =>
+                setForm((current) => ({
+                  ...current,
+                  security: {
+                    ...current.security,
+                    otp_email_enabled: checked,
+                  },
+                }))
+              }
+            />
+            <ToggleRow
+              label="OTP via SMS"
+              helpText="Send authentication OTP codes to user phone numbers."
+              checked={form.security.otp_sms_enabled}
+              onChange={(checked) =>
+                setForm((current) => ({
+                  ...current,
+                  security: {
+                    ...current.security,
+                    otp_sms_enabled: checked,
+                  },
+                }))
+              }
+            />
+            {!form.security.otp_email_enabled && !form.security.otp_sms_enabled ? (
+              <p className="rounded-xl border border-dashed border-amber-400/60 bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-100">
+                Enable at least one OTP channel (email or SMS) before saving.
+              </p>
+            ) : null}
           </SettingsPanel>
           <SettingsPanel>
             <PanelHeading title="Admin sensitive-action PIN" description="Six digits for protected admin actions across the platform." />
@@ -630,7 +669,11 @@ export function SuperSettingsPage() {
       <div className="fixed inset-x-0 bottom-0 z-50 border-t border-border/90 bg-background/90 px-4 py-4 shadow-[0_-8px_30px_rgba(0,0,0,0.06)] backdrop-blur-md dark:border-slate-800 dark:bg-slate-950/90 dark:shadow-black/20">
         <div className="mx-auto flex max-w-6xl flex-col items-stretch justify-between gap-3 sm:flex-row sm:items-center">
           <p className="text-sm text-muted-foreground">Platform settings save together. Admin PIN uses the Save admin PIN control above.</p>
-          <Button className="shrink-0 sm:min-w-[200px]" onClick={() => updateMutation.mutate()} disabled={updateMutation.isPending}>
+          <Button
+            className="shrink-0 sm:min-w-[200px]"
+            onClick={() => updateMutation.mutate()}
+            disabled={updateMutation.isPending || (!form.security.otp_email_enabled && !form.security.otp_sms_enabled)}
+          >
             {updateMutation.isPending ? 'Saving…' : 'Save platform settings'}
           </Button>
         </div>

@@ -3,7 +3,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { createMemberApplication, deleteMemberApplicationDocument, getMyMemberApplication, submitMemberApplication, updateMemberApplication, uploadMemberApplicationDocument } from '@/features/member/api';
+import { createMemberApplication, deleteMemberApplicationDocument, downloadMemberApplicationMandate, getMyMemberApplication, submitMemberApplication, updateMemberApplication, uploadMemberApplicationDocument } from '@/features/member/api';
 import { getPublicAssociations, getActiveTerms } from '@/features/public/api';
 import { onMutationApiError } from '@/lib/mutationFeedback';
 import { Button } from '@/components/ui/button';
@@ -26,6 +26,7 @@ import { mergedFirstLastFromUsers } from '@/utils/userNamesFromUser';
 import { FormField } from '@/components/shared/FormField';
 import { useAuthStore } from '@/store/auth.store';
 import { queryKeys } from '@/lib/queryKeys';
+import { triggerBlobDownload } from '@/utils/download';
 
 const applicantTypeOptions = [
   { label: 'Author', value: 'author' },
@@ -264,6 +265,20 @@ export function MemberApplicationPage() {
     onError: onMutationApiError(),
   });
 
+  const mandateDownloadMutation = useMutation({
+    mutationFn: async () => {
+      if (!application) throw new Error('No application available.');
+      return downloadMemberApplicationMandate(application.id);
+    },
+    onSuccess: (response) => {
+      const disposition = String(response.headers['content-disposition'] ?? '');
+      const filename = disposition.match(/filename="?([^";]+)"?/i)?.[1] ?? 'member_application_mandate.txt';
+      triggerBlobDownload(response.data, filename);
+      toast.success('Mandate form downloaded.');
+    },
+    onError: onMutationApiError(),
+  });
+
   function uploadDocument(documentType: string) {
     const file = documentFiles[documentType];
     if (!file) {
@@ -420,17 +435,22 @@ export function MemberApplicationPage() {
           <PortalFormFooter className="-mx-5 -mb-5 rounded-b-xl">
             <Button type="submit" disabled={!canEdit || saveMutation.isPending}>{saveMutation.isPending ? 'Saving...' : application ? 'Update application' : 'Create application'}</Button>
             <Button type="button" className="border-[#D4AF37] bg-[#D4AF37] text-[#7A1F1A] hover:bg-[#C9A227] hover:text-[#7A1F1A]" disabled={!canSubmit || submitMutation.isPending} onClick={() => submitMutation.mutate()} title={!hasAllKycDocuments ? 'Upload all application documents before submitting.' : undefined}>{submitMutation.isPending ? 'Submitting...' : 'Submit application'}</Button>
+            {application?.application_status === 'approved' ? (
+              <Button type="button" variant="outline" disabled={mandateDownloadMutation.isPending} onClick={() => mandateDownloadMutation.mutate()}>
+                {mandateDownloadMutation.isPending ? 'Downloading...' : 'Download mandate form data'}
+              </Button>
+            ) : null}
           </PortalFormFooter>
 
         </form>
       </Card>
 
-      <Modal open={submissionSuccessOpen} onClose={() => setSubmissionSuccessOpen(false)} title="Application submitted" subtitle="Your membership application is now under association review." size="sm">
+      <Modal open={submissionSuccessOpen} onClose={() => setSubmissionSuccessOpen(false)} title="Application submitted" subtitle="Your membership application is now under affiliation validation." size="sm">
         <div className="space-y-4 text-sm leading-6 text-[#344054] dark:text-slate-200">
           <p>
-            Your application has been submitted. Once {selectedAssociationName} has confirmed your membership, you will be approved on REPRONIG.
+            Your application has been submitted. {selectedAssociationName} will now validate your affiliation, then admin will complete the final review.
           </p>
-          <p>You will be notified immediately your application is confirmed and approved.</p>
+          <p>You will receive email and in-app updates when admin requests changes, rejects, or approves your application.</p>
           <div className="flex justify-end">
             <Button type="button" onClick={() => setSubmissionSuccessOpen(false)}>Okay</Button>
           </div>

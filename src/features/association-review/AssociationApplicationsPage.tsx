@@ -5,11 +5,10 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { User } from 'lucide-react';
 import {
-  approveAssociationApplication,
+  validateAssociationAffiliation,
   getAssociationApplication,
   listAssociationApplications,
-  rejectAssociationApplication,
-  requestChangesAssociationApplication,
+  rejectAssociationAffiliation,
 } from '@/features/association/api';
 import { normalizeApiError } from '@/api/error';
 import { usePaginatedList } from '@/hooks/usePaginatedList';
@@ -31,10 +30,8 @@ import { resolveFileUrl } from '@/utils/fileUrl';
 import {
   approveAssociationApplicationSchema,
   rejectAssociationApplicationSchema,
-  requestChangesAssociationApplicationSchema,
   type ApproveAssociationApplicationFormValues,
   type RejectAssociationApplicationFormValues,
-  type RequestChangesAssociationApplicationFormValues,
 } from '@/features/association-review/schemas';
 import { AssociationApplicationDetail } from '@/features/association-review/AssociationApplicationDetail';
 import { queryKeys } from '@/lib/queryKeys';
@@ -102,10 +99,6 @@ export function AssociationApplicationsPage() {
     resolver: zodResolver(rejectAssociationApplicationSchema),
     defaultValues: { reason: '' },
   });
-  const requestChangesForm = useForm<RequestChangesAssociationApplicationFormValues>({
-    resolver: zodResolver(requestChangesAssociationApplicationSchema),
-    defaultValues: { comment: '' },
-  });
 
   function handleSuccess(message: string) {
     toast.success(message);
@@ -114,13 +107,12 @@ export function AssociationApplicationsPage() {
     queryClient.invalidateQueries({ queryKey: queryKeys.currentUser });
     approveForm.reset({ comment: '' });
     rejectForm.reset({ reason: '' });
-    requestChangesForm.reset({ comment: '' });
   }
 
   const approveMutation = useMutation({
     mutationFn: async (values: ApproveAssociationApplicationFormValues) => {
       if (!application) throw new Error('Select an application first.');
-      return approveAssociationApplication(application.id, values.comment || undefined);
+      return validateAssociationAffiliation(application.id, values.comment || undefined);
     },
     onSuccess: (response) => handleSuccess(response.message),
     onError: onMutationApiError(),
@@ -129,16 +121,7 @@ export function AssociationApplicationsPage() {
   const rejectMutation = useMutation({
     mutationFn: async (values: RejectAssociationApplicationFormValues) => {
       if (!application) throw new Error('Select an application first.');
-      return rejectAssociationApplication(application.id, values.reason);
-    },
-    onSuccess: (response) => handleSuccess(response.message),
-    onError: onMutationApiError(),
-  });
-
-  const requestChangesMutation = useMutation({
-    mutationFn: async (values: RequestChangesAssociationApplicationFormValues) => {
-      if (!application) throw new Error('Select an application first.');
-      return requestChangesAssociationApplication(application.id, values.comment);
+      return rejectAssociationAffiliation(application.id, values.reason);
     },
     onSuccess: (response) => handleSuccess(response.message),
     onError: onMutationApiError(),
@@ -224,40 +207,33 @@ export function AssociationApplicationsPage() {
         {application ? (
           <AssociationApplicationDetail application={application}>
             <div className="space-y-8">
-              <SectionHeader title="Review actions" description="Decision and notes." />
+              <SectionHeader title="Affiliation review actions" description="Association validates or rejects affiliation only." />
               {!canReview ? (
                 <Alert title="Review actions unavailable" description="This application is not in a reviewable state right now. You can still inspect the details above." />
               ) : null}
 
-              <ModalFormSection badge="1" title="Approve application" description="Accept the application. You may add an optional comment for the applicant.">
+              <ModalFormSection badge="1" title="Validate affiliation" description="Confirm this applicant is affiliated with your association.">
                 <form className="space-y-4" onSubmit={approveForm.handleSubmit((values) => approveMutation.mutate(values))}>
                   <FormTextareaField label="Optional comment" error={approveForm.formState.errors.comment?.message} disabled={!canReview} {...approveForm.register('comment')} />
-                  <Button type="submit" className={approvalActionButtonClass} disabled={!canReview || approveMutation.isPending}>{approveMutation.isPending ? 'Approving...' : 'Approve application'}</Button>
+                  <Button type="submit" className={approvalActionButtonClass} disabled={!canReview || approveMutation.isPending}>{approveMutation.isPending ? 'Validating...' : 'Validate affiliation'}</Button>
                 </form>
               </ModalFormSection>
 
-              <ModalFormSection badge="2" title="Request changes" description="Send the application back for edits with guidance in the comment.">
-                <form className="space-y-4" onSubmit={requestChangesForm.handleSubmit((values) => requestChangesMutation.mutate(values))}>
-                  <FormTextareaField label="Comment" error={requestChangesForm.formState.errors.comment?.message} disabled={!canReview} {...requestChangesForm.register('comment')} />
-                  <Button type="submit" variant="outline" disabled={!canReview || requestChangesMutation.isPending}>{requestChangesMutation.isPending ? 'Sending...' : 'Request changes'}</Button>
-                </form>
-              </ModalFormSection>
-
-              <ModalFormSection badge="3" title="Reject application" description="Stop the application with a clear reason the applicant can see.">
+              <ModalFormSection badge="2" title="Reject affiliation" description="Mark affiliation as rejected. Admin still takes the final application decision.">
                 <form
                   className="space-y-4"
                   onSubmit={rejectForm.handleSubmit((values) => {
-                    const confirmed = window.confirm('Are you sure you want to reject this application? This action cannot be undone.');
+                    const confirmed = window.confirm('Are you sure you want to reject this affiliation?');
                     if (!confirmed) return;
                     rejectMutation.mutate(values);
                   })}
                 >
                   <Alert
-                    title="Warning: this action is irreversible"
-                    description='Rejecting this application cannot be undone. If the member only needs to correct details or upload missing information, use "Request changes" instead.'
+                    title="Affiliation outcome only"
+                    description='This only records the association affiliation outcome. Admin will still complete the final member application decision.'
                   />
                   <FormTextareaField label="Reason" error={rejectForm.formState.errors.reason?.message} disabled={!canReview} {...rejectForm.register('reason')} />
-                  <Button type="submit" variant="destructive" disabled={!canReview || rejectMutation.isPending}>{rejectMutation.isPending ? 'Rejecting...' : 'Reject application'}</Button>
+                  <Button type="submit" variant="destructive" disabled={!canReview || rejectMutation.isPending}>{rejectMutation.isPending ? 'Rejecting...' : 'Reject affiliation'}</Button>
                 </form>
               </ModalFormSection>
             </div>

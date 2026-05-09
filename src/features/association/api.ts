@@ -52,23 +52,16 @@ export async function getAssociationApplication(applicationId: number) {
   return data;
 }
 
-export async function approveAssociationApplication(applicationId: number, comment?: string) {
-  const { data } = await apiClient.post<ApiSuccess<MemberApplicationResource>>(`/association/applications/${applicationId}/approve`, {
+export async function validateAssociationAffiliation(applicationId: number, comment?: string) {
+  const { data } = await apiClient.post<ApiSuccess<MemberApplicationResource>>(`/association/applications/${applicationId}/validate-affiliation`, {
     comment,
   });
   return data;
 }
 
-export async function rejectAssociationApplication(applicationId: number, reason: string) {
-  const { data } = await apiClient.post<ApiSuccess<MemberApplicationResource>>(`/association/applications/${applicationId}/reject`, {
+export async function rejectAssociationAffiliation(applicationId: number, reason: string) {
+  const { data } = await apiClient.post<ApiSuccess<MemberApplicationResource>>(`/association/applications/${applicationId}/reject-affiliation`, {
     reason,
-  });
-  return data;
-}
-
-export async function requestChangesAssociationApplication(applicationId: number, comment: string) {
-  const { data } = await apiClient.post<ApiSuccess<MemberApplicationResource>>(`/association/applications/${applicationId}/request-changes`, {
-    comment,
   });
   return data;
 }

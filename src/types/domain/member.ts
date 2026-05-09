@@ -56,6 +56,8 @@ export interface MemberApplicationResource {
   member_author_category_label?: string | null;
   application_status: string;
   application_status_label?: string | null;
+  affiliation_status?: string | null;
+  affiliation_status_label?: string | null;
   submission_stage: string | null;
   submission_stage_label?: string | null;
   nationality: string | null;
@@ -76,10 +78,12 @@ export interface MemberApplicationResource {
   consent_accepted: boolean | null;
   consent_date: string | null;
   notes: string | null;
+  affiliation_review_note?: string | null;
   member_provided_id?: string | null;
   documents?: MemberApplicationDocumentResource[];
   submitted_at: string | null;
   reviewed_at: string | null;
+  affiliation_reviewed_at?: string | null;
   created_at: string | null;
   updated_at: string | null;
 }

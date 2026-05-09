@@ -102,6 +102,21 @@ export async function getAdminMemberApplication(id: number) {
   return data;
 }
 
+export async function approveAdminMemberApplication(id: number, payload?: { comment?: string }) {
+  const { data } = await apiClient.post<ApiSuccess<MemberApplicationResource>>(`/admin/member-applications/${id}/approve`, payload ?? {});
+  return data;
+}
+
+export async function requestChangesAdminMemberApplication(id: number, payload: { comment: string }) {
+  const { data } = await apiClient.post<ApiSuccess<MemberApplicationResource>>(`/admin/member-applications/${id}/request-changes`, payload);
+  return data;
+}
+
+export async function rejectAdminMemberApplication(id: number, payload: { reason: string }) {
+  const { data } = await apiClient.post<ApiSuccess<MemberApplicationResource>>(`/admin/member-applications/${id}/reject`, payload);
+  return data;
+}
+
 export async function listAdminMembers(params: ListParams & { member_type?: string; approval_status?: string; association_id?: number }) {
   const { data } = await apiClient.get<PaginatedResponse<MemberProfileResource>>('/admin/members', { params });
   return data;

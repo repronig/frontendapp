@@ -1,4 +1,5 @@
 import { deleteSuccess, getPaginated, getSuccess, patchSuccess, postSuccess, uploadSuccess } from '@/api/http';
+import { apiClient } from '@/api/client';
 import type { ListParams } from '@/types/api';
 import type {
   MemberApplicationDocumentResource,
@@ -101,6 +102,10 @@ export async function updateMemberApplication(memberApplicationId: number, paylo
 
 export async function submitMemberApplication(memberApplicationId: number) {
   return postSuccess<MemberApplicationResource>(`/member-applications/${memberApplicationId}/submit`);
+}
+
+export async function downloadMemberApplicationMandate(memberApplicationId: number) {
+  return apiClient.get<Blob>(`/member-applications/${memberApplicationId}/mandate`, { responseType: 'blob' });
 }
 
 export async function uploadMemberApplicationDocument(memberApplicationId: number, payload: { document_type: string; file: File }) {
