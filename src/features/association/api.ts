@@ -2,7 +2,10 @@ import { apiClient } from '@/api/client';
 import type { ApiSuccess, ListParams, PaginatedResponse } from '@/types/api';
 import type { AssociationResource, MemberApplicationResource } from '@/types/domain';
 
-export interface AssociationApplicationListParams extends ListParams {}
+export interface AssociationApplicationListParams extends ListParams {
+  /** Filter by association affiliation review: pending | validated | rejected */
+  affiliation_status?: string;
+}
 
 export interface UpdateAssociationProfilePayload {
   name?: string;

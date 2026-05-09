@@ -10,6 +10,7 @@ import { ActivityTimeline } from '@/components/shared/ActivityTimeline';
 import { DataTable } from '@/components/shared/DataTable';
 import { DetailPanelState } from '@/components/shared/DetailPanelState';
 import { DetailGrid } from '@/components/shared/DetailGrid';
+import { FileCard } from '@/components/shared/FileCard';
 import { ListCountSummary } from '@/components/shared/ListCountSummary';
 import { Modal } from '@/components/shared/Modal';
 import { LightboxModal } from '@/components/shared/LightboxModal';
@@ -25,7 +26,7 @@ import type { AssociationResource, InstitutionProfileResource, MemberApplication
 import { confirmAdminSensitiveAction } from '@/features/admin/security';
 import { showAdminActionError, showAdminActionSuccess, showAdminExportError, showAdminExportSuccess } from '@/features/admin/action-feedback';
 import { triggerBlobDownload } from '@/utils/download';
-import { formatDate } from '@/utils/format';
+import { formatDate, formatFileSize } from '@/utils/format';
 import { resolveFileUrl } from '@/utils/fileUrl';
 import { formatDisplayLabel } from '@/utils/display';
 import { queryKeys } from '@/lib/queryKeys';
@@ -212,6 +213,29 @@ function renderApplicationDetail(application: MemberApplicationResource) {
           { label: 'Association', value: formatAssociationSummary(application.association) },
         ]}
       />
+      <div className="space-y-3">
+        <h3 className="text-[16px] font-semibold text-[#101828] dark:text-slate-100">Supporting documents</h3>
+        <p className="text-sm text-[#667085] dark:text-slate-300">
+          Identity, address, and other files supplied with this application. Use preview or download to review.
+        </p>
+        <div className="grid gap-4 md:grid-cols-2">
+          {(application.documents ?? []).length ? (
+            (application.documents ?? []).map((document) => (
+              <FileCard
+                key={document.id}
+                title={document.file_name ?? document.document_type ?? 'Application document'}
+                subtitle={`${document.document_type ?? 'Document'} · ${formatFileSize(document.file_size)} · ${formatDate(document.created_at)}`}
+                fileUrl={document.file_url}
+                downloadUrl={document.download_url}
+              />
+            ))
+          ) : (
+            <div className="rounded-md border border-dashed border-[#D0D5DD] bg-[#FCFCF7] px-4 py-6 text-sm text-[#6B788E] dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300">
+              No supporting documents on file.
+            </div>
+          )}
+        </div>
+      </div>
       {application.notes ? (
         <div className="rounded-2xl border border-[#EAECF0] dark:border-slate-800 bg-white dark:bg-slate-950 p-5">
           <p className="text-xs font-semibold uppercase tracking-wide text-[#667085] dark:text-slate-300">Notes</p>
@@ -425,6 +449,11 @@ export function AdminMembershipPage({ initialTab = 'members', institutionOnly = 
     onError: (error) => showAdminActionError(error, 'The institution action could not be completed.'),
   });
 
+  const closeRecordModal = useCallback(() => {
+    setModalOpen(false);
+    setSelectedId(null);
+  }, []);
+
   const approveApplicationMutation = useMutation({
     mutationFn: async (application: MemberApplicationResource) => {
       const confirmed = await confirmAdminSensitiveAction({ title: 'Confirm member approval', description: 'Approving this application creates/updates a member account.', confirmLabel: 'Approve member application' });
@@ -433,8 +462,9 @@ export function AdminMembershipPage({ initialTab = 'members', institutionOnly = 
     },
     onSuccess: async (response) => {
       showAdminActionSuccess(response.message);
-      await Promise.all([appsQuery.refetch(), appDetailQuery.refetch()]);
       setApplicationAction(null);
+      await appsQuery.refetch();
+      closeRecordModal();
     },
     onError: (error) => showAdminActionError(error, 'The application action could not be completed.'),
   });
@@ -447,8 +477,9 @@ export function AdminMembershipPage({ initialTab = 'members', institutionOnly = 
     },
     onSuccess: async (response) => {
       showAdminActionSuccess(response.message);
-      await Promise.all([appsQuery.refetch(), appDetailQuery.refetch()]);
       setApplicationAction(null);
+      await appsQuery.refetch();
+      closeRecordModal();
     },
     onError: (error) => showAdminActionError(error, 'The application action could not be completed.'),
   });
@@ -461,8 +492,9 @@ export function AdminMembershipPage({ initialTab = 'members', institutionOnly = 
     },
     onSuccess: async (response) => {
       showAdminActionSuccess(response.message);
-      await Promise.all([appsQuery.refetch(), appDetailQuery.refetch()]);
       setApplicationAction(null);
+      await appsQuery.refetch();
+      closeRecordModal();
     },
     onError: (error) => showAdminActionError(error, 'The application action could not be completed.'),
   });

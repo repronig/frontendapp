@@ -10,6 +10,7 @@ const STATUS_LABELS: Record<string, string> = {
   partially_paid: 'Partially paid',
   fully_paid: 'Fully paid',
   changes_requested: 'Changes requested',
+  validated: 'Affiliation validated',
 };
 
 const STATUS_TONES: Record<string, string> = {
@@ -18,6 +19,7 @@ const STATUS_TONES: Record<string, string> = {
   enabled: 'bg-[#ECFDF3] text-[#117A46] border-[#B7E4C7] dark:bg-emerald-950/60 dark:text-emerald-300 dark:border-emerald-900',
   paid: 'bg-[#ECFDF3] text-[#117A46] border-[#B7E4C7] dark:bg-emerald-950/60 dark:text-emerald-300 dark:border-emerald-900',
   verified: 'bg-[#ECFDF3] text-[#117A46] border-[#B7E4C7] dark:bg-emerald-950/60 dark:text-emerald-300 dark:border-emerald-900',
+  validated: 'bg-[#ECFDF3] text-[#117A46] border-[#B7E4C7] dark:bg-emerald-950/60 dark:text-emerald-300 dark:border-emerald-900',
   successful: 'bg-[#ECFDF3] text-[#117A46] border-[#B7E4C7] dark:bg-emerald-950/60 dark:text-emerald-300 dark:border-emerald-900',
   pending: 'bg-[#FFFAEB] text-[#B76E00] border-[#F4D58D] dark:bg-amber-950/60 dark:text-amber-300 dark:border-amber-900',
   pending_offline: 'bg-[#FFFAEB] text-[#B76E00] border-[#F4D58D] dark:bg-amber-950/60 dark:text-amber-300 dark:border-amber-900',

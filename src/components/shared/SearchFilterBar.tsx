@@ -13,6 +13,9 @@ export function SearchFilterBar({
   status,
   onStatusChange,
   statusOptions,
+  secondaryStatus,
+  onSecondaryStatusChange,
+  secondaryStatusOptions,
   searchPlaceholder = 'Search',
   dateFrom,
   dateTo,
@@ -25,6 +28,10 @@ export function SearchFilterBar({
   status?: string;
   onStatusChange?: (value: string) => void;
   statusOptions?: StatusOption[];
+  /** Optional second status-style filter (e.g. affiliation status on association applications). */
+  secondaryStatus?: string;
+  onSecondaryStatusChange?: (value: string) => void;
+  secondaryStatusOptions?: StatusOption[];
   searchPlaceholder?: string;
   dateFrom?: string;
   dateTo?: string;
@@ -53,6 +60,23 @@ export function SearchFilterBar({
           <SlidersHorizontal className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[#98A2B3]" />
           <select value={status ?? ''} onChange={(event) => onStatusChange(event.target.value)} className="h-12 w-full rounded-md border border-[#222222] bg-white dark:bg-slate-950 pl-11 pr-4 text-base text-[#1E2024] dark:text-slate-100 outline-none focus:border-[#AF1512] focus:ring-2 focus:ring-[rgba(175,21,18,0.12)] dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100">
             {options.map((option) => <option key={`${option.label}-${option.value}`} value={option.value}>{option.label}</option>)}
+          </select>
+        </div>
+      ) : null}
+      {onSecondaryStatusChange && secondaryStatusOptions ? (
+        <div className="relative w-full sm:w-[240px]">
+          <SlidersHorizontal className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[#98A2B3]" />
+          <select
+            value={secondaryStatus ?? ''}
+            onChange={(event) => onSecondaryStatusChange(event.target.value)}
+            aria-label="Affiliation status filter"
+            className="h-12 w-full rounded-md border border-[#222222] bg-white dark:bg-slate-950 pl-11 pr-4 text-base text-[#1E2024] dark:text-slate-100 outline-none focus:border-[#AF1512] focus:ring-2 focus:ring-[rgba(175,21,18,0.12)] dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+          >
+            {secondaryStatusOptions.map((option) => (
+              <option key={`aff-${option.label}-${option.value}`} value={option.value}>
+                {option.label}
+              </option>
+            ))}
           </select>
         </div>
       ) : null}

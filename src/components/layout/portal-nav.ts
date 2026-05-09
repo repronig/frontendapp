@@ -95,7 +95,7 @@ const superAdminNav: PortalNavItem[] = superAdminNavOrderedLabels.map((label) =>
 export const portalNav: Record<PortalKey, PortalNavItem[]> = {
   member: [
     { label: 'Dashboard', to: '/member', icon: Home },
-    { label: 'My Application', to: '/member/onboarding', icon: FileCheck2 },
+    { label: 'My Mandate', to: '/member/onboarding', icon: FileCheck2 },
     { label: 'My Profile', to: '/member/profile', icon: Users },
     { label: 'My Works', to: '/member/works', icon: FolderOpen },
     { label: 'Recent Activity', to: '/member/recent-activity', icon: BarChart3 },

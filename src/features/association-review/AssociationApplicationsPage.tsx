@@ -24,6 +24,7 @@ import { Modal } from '@/components/shared/Modal';
 import { ModalFormSection } from '@/components/shared/ModalForm';
 import { PaginationBar } from '@/components/shared/PaginationBar';
 import { StatusBadge } from '@/components/shared/StatusBadge';
+import type { ApiSuccess } from '@/types/api';
 import type { MemberApplicationResource } from '@/types/domain';
 import { formatDate } from '@/utils/format';
 import { resolveFileUrl } from '@/utils/fileUrl';
@@ -66,17 +67,31 @@ const statusOptions = [
   { label: 'Draft', value: 'draft' },
 ];
 
+const affiliationStatusOptions = [
+  { label: 'All affiliation statuses', value: '' },
+  { label: 'Affiliation pending', value: 'pending' },
+  { label: 'Affiliation validated', value: 'validated' },
+  { label: 'Affiliation rejected', value: 'rejected' },
+];
+
 export function AssociationApplicationsPage() {
   const queryClient = useQueryClient();
   const { page, setPage, perPage, setPerPage } = useTablePagination();
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState('submitted');
+  const [affiliationStatus, setAffiliationStatus] = useState('');
   const [selectedId, setSelectedId] = useState<number | null>(null);
 
   const listQuery = usePaginatedList({
-    queryKey: [...queryKeys.associationApplications, page, perPage, search, status],
+    queryKey: [...queryKeys.associationApplications, page, perPage, search, status, affiliationStatus],
     queryFn: listAssociationApplications,
-    params: { page, per_page: perPage, search: search || undefined, status: status || undefined },
+    params: {
+      page,
+      per_page: perPage,
+      search: search || undefined,
+      status: status || undefined,
+      affiliation_status: affiliationStatus || undefined,
+    },
   });
 
   const detailQuery = useQuery({
@@ -104,10 +119,11 @@ export function AssociationApplicationsPage() {
     defaultValues: { reason: '' },
   });
 
-  function handleAffiliationDecisionSuccess(message: string, applicationId: number) {
-    toast.success(message);
-    queryClient.invalidateQueries({ queryKey: queryKeys.associationApplications });
-    queryClient.invalidateQueries({ queryKey: queryKeys.associationApplication(applicationId) });
+  async function handleAffiliationDecisionSuccess(response: ApiSuccess<MemberApplicationResource>) {
+    const applicationId = response.data.id;
+    queryClient.setQueryData(queryKeys.associationApplication(applicationId), response);
+    await queryClient.refetchQueries({ queryKey: queryKeys.associationApplications });
+    toast.success(response.message);
     queryClient.invalidateQueries({ queryKey: queryKeys.currentUser });
     approveForm.reset({ comment: '' });
     rejectForm.reset({ reason: '' });
@@ -119,8 +135,8 @@ export function AssociationApplicationsPage() {
       if (!application) throw new Error('Select an application first.');
       return validateAssociationAffiliation(application.id, values.comment || undefined);
     },
-    onSuccess: (response) => {
-      if (application) handleAffiliationDecisionSuccess(response.message, application.id);
+    onSuccess: async (response) => {
+      await handleAffiliationDecisionSuccess(response);
     },
     onError: onMutationApiError(),
   });
@@ -130,8 +146,8 @@ export function AssociationApplicationsPage() {
       if (!application) throw new Error('Select an application first.');
       return rejectAssociationAffiliation(application.id, values.reason);
     },
-    onSuccess: (response) => {
-      if (application) handleAffiliationDecisionSuccess(response.message, application.id);
+    onSuccess: async (response) => {
+      await handleAffiliationDecisionSuccess(response);
     },
     onError: onMutationApiError(),
   });
@@ -141,7 +157,7 @@ export function AssociationApplicationsPage() {
   return (
     <>
       <div className="space-y-6">
-        <SectionHeader title="Application review" description="Applications for your association." />
+        <SectionHeader title="Application review" description="REPRONIG Applications for your association to review affiliation." />
 
         <SearchFilterBar
           search={search}
@@ -155,10 +171,17 @@ export function AssociationApplicationsPage() {
             setPage(1);
           }}
           statusOptions={statusOptions}
+          secondaryStatus={affiliationStatus}
+          onSecondaryStatusChange={(value) => {
+            setAffiliationStatus(value);
+            setPage(1);
+          }}
+          secondaryStatusOptions={affiliationStatusOptions}
           searchPlaceholder="Search by applicant name, email, or applicant type"
           onReset={() => {
             setSearch('');
             setStatus('submitted');
+            setAffiliationStatus('');
             setPage(1);
           }}
         />
@@ -172,6 +195,16 @@ export function AssociationApplicationsPage() {
             },
             { key: 'type', header: 'Type', render: (row: MemberApplicationResource) => row.applicant_type.replace(/_/g, ' ') },
             { key: 'status', header: 'Status', render: (row: MemberApplicationResource) => <StatusBadge value={row.application_status} /> },
+            {
+              key: 'affiliation_status',
+              header: 'Affiliation',
+              render: (row: MemberApplicationResource) => (
+                <StatusBadge
+                  value={row.affiliation_status ?? 'pending'}
+                  label={row.affiliation_status_label ?? undefined}
+                />
+              ),
+            },
             { key: 'submitted', header: 'Submitted', render: (row: MemberApplicationResource) => formatDate(row.submitted_at) },
             {
               key: 'actions',
