@@ -172,7 +172,7 @@ export function PortalLayout({ portal, title }: { portal: PortalKey; title: stri
 
   const unreadCountQuery = useQuery({
     queryKey: queryKeys.notificationsUnreadCount,
-    queryFn: async () => (await getUnreadNotificationCount()).data,
+    queryFn: getUnreadNotificationCount,
   });
 
   const markReadMutation = useMutation(notificationMarkReadMutationOptions(queryClient));

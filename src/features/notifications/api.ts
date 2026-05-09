@@ -15,9 +15,10 @@ export async function listNotifications(params?: {
   return data;
 }
 
-export async function getUnreadNotificationCount() {
+/** Returns the payload stored under `notificationsUnreadCount` (same shape as layout dropdown cache). */
+export async function getUnreadNotificationCount(): Promise<{ unread_count: number }> {
   const { data } = await apiClient.get<ApiSuccess<{ unread_count: number }>>('/me/notifications/unread-count');
-  return data;
+  return data.data;
 }
 
 export async function markNotificationAsRead(notificationId: string) {

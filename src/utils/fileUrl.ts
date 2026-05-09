@@ -8,7 +8,16 @@ function getApiOrigin() {
   }
 }
 
-function normalizeStoragePath(pathname: string) {
+/** Strip "/storage/" when the real object key is "documents/..." (S3, CloudFront, etc.). */
+function stripErroneousRemoteStoragePrefix(pathname: string) {
+  return pathname.replace(
+    /^\/storage\/(documents|user_avatars|work-files|works|member-application-documents|institution-documents)\//i,
+    '/$1/',
+  );
+}
+
+function normalizeStoragePath(pathname: string, options?: { prependLocalStorage?: boolean }) {
+  const prependLocalStorage = options?.prependLocalStorage ?? true;
   let path = pathname.trim();
   if (!path) return path;
   path = path.startsWith('/') ? path : `/${path}`;
@@ -17,7 +26,7 @@ function normalizeStoragePath(pathname: string) {
   path = path.replace(/^\/api\/storage\//i, '/storage/');
   path = path.replace(/^\/medium\/storage\//i, '/storage/');
 
-  if (!path.startsWith('/storage/')) {
+  if (!path.startsWith('/storage/') && prependLocalStorage) {
     const bareStorageFolders = ['user_avatars', 'work-files', 'documents', 'member-application-documents', 'institution-documents'];
     if (bareStorageFolders.some((folder) => path === `/${folder}` || path.startsWith(`/${folder}/`))) {
       path = `/storage${path}`;
@@ -46,7 +55,12 @@ export function resolveFileUrl(input?: string | null) {
         parsed.protocol = window.location.protocol;
         parsed.host = api.host;
       }
-      parsed.pathname = normalizeStoragePath(parsed.pathname);
+      const isApiHost = parsed.hostname === api.hostname;
+      let pathname = parsed.pathname;
+      if (!isApiHost) {
+        pathname = stripErroneousRemoteStoragePrefix(pathname);
+      }
+      parsed.pathname = normalizeStoragePath(pathname, { prependLocalStorage: isApiHost });
       return parsed.toString();
     } catch {
       return value;

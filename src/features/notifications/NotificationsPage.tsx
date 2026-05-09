@@ -166,7 +166,7 @@ export function NotificationsPage() {
           <div className="flex h-11 w-11 items-center justify-center rounded-full bg-[#FFF4F4] text-[#AF1512]"><Bell className="h-5 w-5" /></div>
           <div>
             <p className="text-sm font-semibold text-[#2B2B2D] dark:text-slate-100">Unread notifications</p>
-            <p className="text-sm text-[#6B788E] dark:text-slate-300">{unreadCountQuery.data?.data.unread_count ?? 0} unread</p>
+            <p className="text-sm text-[#6B788E] dark:text-slate-300">{unreadCountQuery.data?.unread_count ?? 0} unread</p>
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -193,7 +193,7 @@ export function NotificationsPage() {
               (unreadCountQuery.isFetching && !unreadCountQuery.isLoading)
             }
           />
-          <Button variant="outline" onClick={() => markAllReadMutation.mutate(undefined)} disabled={markAllReadMutation.isPending || (unreadCountQuery.data?.data.unread_count ?? 0) === 0}>
+          <Button variant="outline" onClick={() => markAllReadMutation.mutate(undefined)} disabled={markAllReadMutation.isPending || (unreadCountQuery.data?.unread_count ?? 0) === 0}>
             {markAllReadMutation.isPending ? 'Marking...' : 'Mark all as read'}
           </Button>
         </div>
