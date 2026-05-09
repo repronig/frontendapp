@@ -44,6 +44,38 @@ jobs:
           VITE_FLUTTERWAVE_PUBLIC_KEY: ${{ secrets.VITE_FLUTTERWAVE_PUBLIC_KEY_STAGING }}
         run: npm run build
 
+      - name: Validate production FTP settings
+        if: github.ref_name == 'main'
+        env:
+          FTP_HOST: ${{ secrets.FTP_HOST_PROD }}
+          FTP_USER: ${{ secrets.FTP_USERNAME_PROD }}
+          FTP_PASSWORD: ${{ secrets.FTP_PASSWORD_PROD }}
+          FTP_PORT: ${{ secrets.FTP_PORT_PROD || '21' }}
+        run: |
+          [ -z "$FTP_HOST" ] && echo "::error::Missing FTP_HOST_PROD secret." && exit 1
+          [ -z "$FTP_USER" ] && echo "::error::Missing FTP_USERNAME_PROD secret." && exit 1
+          [ -z "$FTP_PASSWORD" ] && echo "::error::Missing FTP_PASSWORD_PROD secret." && exit 1
+          if ! [[ "$FTP_PORT" =~ ^[0-9]+$ ]]; then
+            echo "::error::FTP_PORT_PROD must be a whole number (for example 21)."
+            exit 1
+          fi
+
+      - name: Validate staging FTP settings
+        if: github.ref_name == 'staging'
+        env:
+          FTP_HOST: ${{ secrets.FTP_HOST_STAGING }}
+          FTP_USER: ${{ secrets.FTP_USERNAME_STAGING }}
+          FTP_PASSWORD: ${{ secrets.FTP_PASSWORD_STAGING }}
+          FTP_PORT: ${{ secrets.FTP_PORT_STAGING || '21' }}
+        run: |
+          [ -z "$FTP_HOST" ] && echo "::error::Missing FTP_HOST_STAGING secret." && exit 1
+          [ -z "$FTP_USER" ] && echo "::error::Missing FTP_USERNAME_STAGING secret." && exit 1
+          [ -z "$FTP_PASSWORD" ] && echo "::error::Missing FTP_PASSWORD_STAGING secret." && exit 1
+          if ! [[ "$FTP_PORT" =~ ^[0-9]+$ ]]; then
+            echo "::error::FTP_PORT_STAGING must be a whole number (for example 21)."
+            exit 1
+          fi
+
       - name: Deploy production via FTP
         if: github.ref_name == 'main'
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
@@ -51,7 +83,7 @@ jobs:
           server: ${{ secrets.FTP_HOST_PROD }}
           username: ${{ secrets.FTP_USERNAME_PROD }}
           password: ${{ secrets.FTP_PASSWORD_PROD }}
-          port: ${{ secrets.FTP_PORT_PROD }}
+          port: ${{ secrets.FTP_PORT_PROD || '21' }}
           local-dir: dist/
           server-dir: /public_html/
           dangerous-clean-slate: false
@@ -63,7 +95,7 @@ jobs:
           server: ${{ secrets.FTP_HOST_STAGING }}
           username: ${{ secrets.FTP_USERNAME_STAGING }}
           password: ${{ secrets.FTP_PASSWORD_STAGING }}
-          port: ${{ secrets.FTP_PORT_STAGING }}
+          port: ${{ secrets.FTP_PORT_STAGING || '21' }}
           local-dir: dist/
           server-dir: /public_html/
           dangerous-clean-slate: false
