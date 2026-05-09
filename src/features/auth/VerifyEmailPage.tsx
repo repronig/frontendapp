@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { getEmailVerificationStatus, resendVerificationEmail, verifyEmailWithSignedUrl } from '@/features/auth/api';
 import { onMutationApiError } from '@/lib/mutationFeedback';
@@ -10,8 +10,10 @@ import { useAuthStore } from '@/store/auth.store';
 import { queryKeys } from '@/lib/queryKeys';
 
 export function VerifyEmailPage() {
+  const navigate = useNavigate();
   const location = useLocation();
   const token = useAuthStore((state) => state.token);
+  const currentUser = useAuthStore((state) => state.currentUser);
 
   const statusQuery = useQuery({
     queryKey: queryKeys.emailVerificationStatus,
@@ -21,7 +23,18 @@ export function VerifyEmailPage() {
 
   const resendMutation = useMutation({
     mutationFn: resendVerificationEmail,
-    onSuccess: (response) => toast.success(response.message),
+    onSuccess: (response) => {
+      toast.success(response.message);
+      const email = statusQuery.data?.data.email || currentUser?.user?.email || '';
+      const accountType = currentUser?.user?.account_type;
+      if (accountType === 'member') {
+        navigate('/member/confirm-otp', { replace: true, state: { email } });
+        return;
+      }
+      if (accountType === 'institution_user') {
+        navigate('/institution/confirm-otp', { replace: true, state: { email } });
+      }
+    },
     onError: onMutationApiError(),
   });
 
