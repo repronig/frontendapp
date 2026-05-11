@@ -10,6 +10,7 @@ import {
   FolderOpen,
   Cable,
   Home,
+  LifeBuoy,
   Receipt,
   Scale,
   Settings,
@@ -39,12 +40,14 @@ const adminNav: PortalNavItem[] = [
   { label: 'Documents', to: '/admin/document-upload', icon: FilePlus2 },
   { label: 'Terms and Conditions', to: '/admin/terms-and-conditions', icon: FileText },
   { label: 'Reports', to: '/admin/reports', icon: BarChart3 },
+  { label: 'Support', to: '/admin/support', icon: LifeBuoy },
   { label: 'Push Notifications', to: '/admin/push-notifications', icon: Bell },
 ];
 
 const superAdminOpsNav: PortalNavItem[] = adminNav.map((item) => ({
   ...item,
-  to: item.to.replace('/admin', '/super-admin'),
+  /** Staff support uses the admin shell only (avoids duplicate routes under `/super-admin`). */
+  to: item.label === 'Support' ? '/admin/support' : item.to.replace('/admin', '/super-admin'),
 }));
 
 const superAdminOpsByLabel = Object.fromEntries(superAdminOpsNav.map((item) => [item.label, item])) as Record<string, PortalNavItem>;
@@ -75,6 +78,7 @@ const superAdminNavOrderedLabels = [
   'Licensing Ops',
   'Finance',
   'Reports',
+  'Support',
   'Push Notifications',
   'Institutions',
   'Associations',
@@ -99,12 +103,14 @@ export const portalNav: Record<PortalKey, PortalNavItem[]> = {
     { label: 'My Profile', to: '/member/profile', icon: Users },
     { label: 'My Works', to: '/member/works', icon: FolderOpen },
     { label: 'Recent Activity', to: '/member/recent-activity', icon: BarChart3 },
+    { label: 'Support', to: '/member/support', icon: LifeBuoy },
   ],
   association: [
     { label: 'Dashboard', to: '/association', icon: Home },
     { label: 'Profile', to: '/association/profile', icon: Building2 },
     { label: 'Applications', to: '/association/applications', icon: FileCheck2 },
     { label: 'Recent Activity', to: '/association/recent-activity', icon: BarChart3 },
+    { label: 'Support', to: '/association/support', icon: LifeBuoy },
   ],
   institution: [
     { label: 'Dashboard', to: '/institution', icon: Home },
@@ -113,6 +119,7 @@ export const portalNav: Record<PortalKey, PortalNavItem[]> = {
     { label: 'Invoices', to: '/institution/invoices', icon: Receipt },
     { label: 'Licences', to: '/institution/licences', icon: Scale },
     { label: 'Recent Activities', to: '/institution/recent-activities', icon: BarChart3 },
+    { label: 'Support', to: '/institution/support', icon: LifeBuoy },
   ],
   admin: adminNav,
   super_admin: superAdminNav,

@@ -46,6 +46,8 @@ function getCategoryBadgeStyles(category?: string) {
     case 'approval':
     case 'governance':
       return 'border-[#FDE68A] bg-[#FFFBEB] text-[#B45309]';
+    case 'support':
+      return 'border-[#BFDBFE] bg-[#EFF6FF] text-[#1D4ED8] dark:border-sky-900 dark:bg-sky-950/40 dark:text-sky-300';
     default:
       return 'border-[#D0D5DD] bg-white dark:bg-slate-950 text-[#475467] dark:text-slate-300';
   }

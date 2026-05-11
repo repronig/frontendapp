@@ -16,6 +16,9 @@ import type {
   LicensingFeePlanResource,
   MemberApplicationResource,
   MemberProfileResource,
+  SupportTicketInternalNoteResource,
+  SupportTicketReplyResource,
+  SupportTicketResource,
   TimelineEventResource,
   AssociationResource,
   UsageDeclarationResource,
@@ -528,5 +531,30 @@ export async function createTermsAndCondition(payload: TermsAndConditionPayload)
 
 export async function updateTermsAndCondition(id: number, payload: Partial<TermsAndConditionPayload>) {
   const { data } = await apiClient.patch<ApiSuccess<TermsAndConditionResource>>(`/admin/terms-and-conditions/${id}`, payload);
+  return data;
+}
+
+export async function listAdminSupportTickets(params: ListParams = {}) {
+  const { data } = await apiClient.get<PaginatedResponse<SupportTicketResource>>('/admin/support-tickets', { params });
+  return data;
+}
+
+export async function getAdminSupportTicket(id: number) {
+  const { data } = await apiClient.get<ApiSuccess<SupportTicketResource>>(`/admin/support-tickets/${id}`);
+  return data;
+}
+
+export async function patchAdminSupportTicket(id: number, payload: { status: string }) {
+  const { data } = await apiClient.patch<ApiSuccess<SupportTicketResource>>(`/admin/support-tickets/${id}`, payload);
+  return data;
+}
+
+export async function postAdminSupportTicketReply(id: number, body: string) {
+  const { data } = await apiClient.post<ApiSuccess<SupportTicketReplyResource>>(`/admin/support-tickets/${id}/replies`, { body });
+  return data;
+}
+
+export async function postAdminSupportTicketInternalNote(id: number, body: string) {
+  const { data } = await apiClient.post<ApiSuccess<SupportTicketInternalNoteResource>>(`/admin/support-tickets/${id}/internal-notes`, { body });
   return data;
 }

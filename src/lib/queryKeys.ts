@@ -84,6 +84,12 @@ export const queryKeys = {
   /** Admin standalone document-upload page (`DocumentManager` list/invalidate root). */
   adminDocuments: ['admin-documents'] as const,
 
+  portalSupportTickets: ['portal-support-tickets'] as const,
+  portalSupportTicket: (id: number | null) => ['portal-support-ticket', id] as const,
+
+  adminSupportTickets: ['admin-support-tickets'] as const,
+  adminSupportTicket: (id: number | null) => ['admin-support-ticket', id] as const,
+
   adminWorks: ['admin-works'] as const,
   /** Prefix for invalidating every admin work detail query. */
   adminWorkRoot: ['admin-work'] as const,

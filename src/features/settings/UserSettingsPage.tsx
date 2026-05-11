@@ -52,6 +52,19 @@ function toPreferenceKey(item: NotificationPreference) {
   return `${item.event_key}:${item.channel}`;
 }
 
+/** Human-readable group titles for taxonomy keys (settings + privileged full list). */
+const TAXONOMY_GROUP_LABELS: Record<string, string> = {
+  account_security: 'Account security',
+  application_updates: 'Application updates',
+  work_reviews: 'Work and repertoire reviews',
+  licensing_updates: 'Licensing and declarations',
+  payment_updates: 'Payments',
+  approval_updates: 'Approvals and governance',
+  general_announcements: 'General announcements',
+  document_updates: 'Documents and uploads',
+  support_updates: 'Support desk',
+};
+
 function SecuritySummaryCard({ title, value, hint, tone = 'neutral' }: { title: string; value: string; hint?: string; tone?: 'neutral' | 'good' | 'warning' }) {
   const toneClass = tone === 'good'
     ? 'border-[#D1FADF] bg-[#ECFDF3] dark:border-emerald-900 dark:bg-emerald-950/40'
@@ -251,30 +264,33 @@ export function UserSettingsPage() {
   const preferenceGroups = useMemo(() => {
     const simplifiedPreferenceConfig: Record<string, { allowedKeys: Set<string>; labelMap: Record<string, string> }> = {
       member: {
-        allowedKeys: new Set(['application_updates', 'payment_updates', 'approval_updates', 'general_announcements']),
+        allowedKeys: new Set(['application_updates', 'payment_updates', 'approval_updates', 'general_announcements', 'support_updates']),
         labelMap: {
           application_updates: 'Application updates',
           payment_updates: 'Payment updates',
           approval_updates: 'Approval and rejection updates',
           general_announcements: 'General announcements',
+          support_updates: 'Support tickets (your requests and replies from REPRONIG)',
         },
       },
       institution: {
-        allowedKeys: new Set(['licensing_updates', 'payment_updates', 'document_updates', 'general_announcements']),
+        allowedKeys: new Set(['licensing_updates', 'payment_updates', 'document_updates', 'general_announcements', 'support_updates']),
         labelMap: {
           licensing_updates: 'Licensing and invoice updates (generated, due, overdue)',
           payment_updates: 'Payment updates (initiated, received, offline decisions)',
           document_updates: 'Document updates',
           general_announcements: 'General announcements',
+          support_updates: 'Support tickets (your requests and replies from REPRONIG)',
         },
       },
       association: {
-        allowedKeys: new Set(['application_updates', 'document_updates', 'approval_updates', 'general_announcements']),
+        allowedKeys: new Set(['application_updates', 'document_updates', 'approval_updates', 'general_announcements', 'support_updates']),
         labelMap: {
           application_updates: 'Application updates',
           document_updates: 'Document updates',
           approval_updates: 'Approval, review, and access status updates',
           general_announcements: 'General announcements',
+          support_updates: 'Support tickets (your requests and replies from REPRONIG)',
         },
       },
     };
@@ -298,7 +314,10 @@ export function UserSettingsPage() {
       groups.get(item.event_key)?.push(item);
     });
 
-    return Array.from(groups.entries()).map(([key, groupItems]) => [config?.labelMap[key] ?? key.replaceAll('_', ' '), groupItems] as [string, NotificationPreference[]]);
+    return Array.from(groups.entries()).map(
+      ([key, groupItems]) =>
+        [config?.labelMap[key] ?? TAXONOMY_GROUP_LABELS[key] ?? key.replaceAll('_', ' '), groupItems] as [string, NotificationPreference[]],
+    );
   }, [isAssociationUser, isInstitutionUser, isMemberUser, notificationPreferencesQuery.data]);
 
   const avatarPreview = avatarFile ? URL.createObjectURL(avatarFile) : resolveFileUrl(currentUser?.user.avatar_medium_url ?? currentUser?.user.avatar_url ?? null);
@@ -577,9 +596,9 @@ export function UserSettingsPage() {
         <Card className="space-y-4 xl:col-span-2">
           <SectionHeader title="Notifications" description="What we notify you about." />
           <div className="space-y-3">
-            {preferenceGroups.map(([eventKey, items]) => (
-              <div key={eventKey} className="rounded-2xl border border-[#EAECF0] bg-[#FCFCF7] p-4 dark:border-slate-800 dark:bg-slate-900">
-                <p className="text-sm font-semibold capitalize text-[#2B2B2D] dark:text-slate-100 dark:text-slate-100">{eventKey.replaceAll('_', ' ')}</p>
+            {preferenceGroups.map(([groupTitle, items]) => (
+              <div key={groupTitle} className="rounded-2xl border border-[#EAECF0] bg-[#FCFCF7] p-4 dark:border-slate-800 dark:bg-slate-900">
+                <p className="text-sm font-semibold text-[#2B2B2D] dark:text-slate-100 dark:text-slate-100">{groupTitle}</p>
                 <div className="mt-3 grid gap-3 sm:grid-cols-2">
                   {items.map((item) => {
                     const key = toPreferenceKey(item);

@@ -11,9 +11,21 @@ const STATUS_LABELS: Record<string, string> = {
   fully_paid: 'Fully paid',
   changes_requested: 'Changes requested',
   validated: 'Affiliation validated',
+  open: 'Open',
+  in_progress: 'In progress',
+  resolved: 'Resolved',
+  closed: 'Closed',
 };
 
 const STATUS_TONES: Record<string, string> = {
+  /** Support tickets */
+  open: 'bg-[#EFF8FF] text-[#175CD3] border-[#B2DDFF] shadow-[inset_0_0_0_1px_rgba(23,92,211,0.06)] dark:bg-sky-950/70 dark:text-sky-200 dark:border-sky-800',
+  in_progress:
+    'bg-[#FFFAEB] text-[#B45309] border-[#FEDF89] shadow-[inset_0_0_0_1px_rgba(180,83,9,0.06)] dark:bg-amber-950/70 dark:text-amber-200 dark:border-amber-800',
+  resolved:
+    'bg-[#ECFDF3] text-[#117A46] border-[#ABEFC6] shadow-[inset_0_0_0_1px_rgba(17,122,70,0.06)] dark:bg-emerald-950/70 dark:text-emerald-200 dark:border-emerald-800',
+  closed:
+    'bg-[#F4F4F5] text-[#3F3F46] border-[#D4D4D8] shadow-[inset_0_0_0_1px_rgba(63,63,70,0.05)] dark:bg-slate-800/90 dark:text-slate-300 dark:border-slate-600',
   approved: 'bg-[#ECFDF3] text-[#117A46] border-[#B7E4C7] dark:bg-emerald-950/60 dark:text-emerald-300 dark:border-emerald-900',
   active: 'bg-[#ECFDF3] text-[#117A46] border-[#B7E4C7] dark:bg-emerald-950/60 dark:text-emerald-300 dark:border-emerald-900',
   enabled: 'bg-[#ECFDF3] text-[#117A46] border-[#B7E4C7] dark:bg-emerald-950/60 dark:text-emerald-300 dark:border-emerald-900',

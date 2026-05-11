@@ -66,6 +66,16 @@ export type {
 } from './integrations';
 
 export type {
+  SupportTicketCategory,
+  SupportTicketInternalNoteResource,
+  SupportTicketPortalContext,
+  SupportTicketReplyResource,
+  SupportTicketResource,
+  SupportTicketStatus,
+  SupportTicketUserSnippet,
+} from './support';
+
+export type {
   AdminBoardSummary,
   AdminCompletenessReport,
   AdminMemberReport,

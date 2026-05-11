@@ -62,7 +62,7 @@ export function ResetPasswordPage() {
   }, [searchParams]);
 
   return (
-    <AuthCard title="Reset Password" subtitle="Enter your reset token and choose a new password.">
+    <AuthCard title="Reset Password" subtitle="Choose a new password.">
       <form className="space-y-4" onSubmit={form.handleSubmit((values) => resetMutation.mutate(values))}>
         <FormField label="Email" requiredIndicator type="email" {...form.register('email')} error={form.formState.errors.email?.message} />
         <FormField label="Reset token" requiredIndicator {...form.register('token')} error={form.formState.errors.token?.message} />

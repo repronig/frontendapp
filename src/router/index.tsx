@@ -1,5 +1,6 @@
 import { lazy, Suspense } from 'react';
 import { createBrowserRouter, Navigate, type RouteObject } from 'react-router-dom';
+import { AdminSupportTicketsLegacyRedirect } from '@/features/admin/AdminSupportTicketsLegacyRedirect';
 import { PublicLayout } from '@/components/layout/PublicLayout';
 import { PortalLayout } from '@/components/layout/PortalLayout';
 import { LoadingState } from '@/components/shared/LoadingState';
@@ -60,19 +61,41 @@ const SuperSettingsPage = lazy(() => import('@/features/super-admin/SuperSetting
 const SuperIntegrationsPage = lazy(() => import('@/features/super-admin/SuperIntegrationsPage').then((m) => ({ default: m.SuperIntegrationsPage })));
 const NotificationsPage = lazy(() => import('@/features/notifications/NotificationsPage').then((m) => ({ default: m.NotificationsPage })));
 const UserSettingsPage = lazy(() => import('@/features/settings/UserSettingsPage').then((m) => ({ default: m.UserSettingsPage })));
+const SupportTicketsListPage = lazy(() => import('@/features/support/SupportTicketsListPage').then((m) => ({ default: m.SupportTicketsListPage })));
+const SupportTicketNewPage = lazy(() => import('@/features/support/SupportTicketNewPage').then((m) => ({ default: m.SupportTicketNewPage })));
+const SupportTicketDetailPage = lazy(() => import('@/features/support/SupportTicketDetailPage').then((m) => ({ default: m.SupportTicketDetailPage })));
+const AdminSupportTicketsPage = lazy(() => import('@/features/admin/AdminSupportTicketsPage').then((m) => ({ default: m.AdminSupportTicketsPage })));
 
 function withSuspense(element: React.ReactNode) {
   return <Suspense fallback={<LoadingState />}>{element}</Suspense>;
 }
 
+type AdminSupportRouteMode = 'full' | 'legacy-redirect-only';
+
 /** Child routes shared between `/admin` and `/super-admin` (after each portal’s home and super-only entries). */
-function sharedAdminPortalChildRoutes(membershipVariant: 'default' | 'members_initial'): RouteObject[] {
+function sharedAdminPortalChildRoutes(
+  membershipVariant: 'default' | 'members_initial',
+  supportRouteMode: AdminSupportRouteMode = 'full',
+): RouteObject[] {
   const membershipElement =
     membershipVariant === 'members_initial' ? (
       <AdminMembershipPage initialTab="members" />
     ) : (
       <AdminMembershipPage />
     );
+
+  const supportRoutes: RouteObject[] =
+    supportRouteMode === 'full'
+      ? [
+          { path: 'support', element: withSuspense(<AdminSupportTicketsPage />) },
+          { path: 'support/:ticketId', element: withSuspense(<AdminSupportTicketsPage />) },
+          { path: 'support-tickets', element: <Navigate to="/admin/support" replace /> },
+          { path: 'support-tickets/:ticketId', element: withSuspense(<AdminSupportTicketsLegacyRedirect />) },
+        ]
+      : [
+          { path: 'support-tickets', element: <Navigate to="/admin/support" replace /> },
+          { path: 'support-tickets/:ticketId', element: withSuspense(<AdminSupportTicketsLegacyRedirect />) },
+        ];
 
   return [
     { path: 'works', element: withSuspense(<AdminWorksPage />) },
@@ -95,6 +118,7 @@ function sharedAdminPortalChildRoutes(membershipVariant: 'default' | 'members_in
     { path: 'document-upload', element: withSuspense(<AdminDocumentUploadPage />) },
     { path: 'terms-and-conditions', element: withSuspense(<AdminTermsAndConditionsPage />) },
     { path: 'reports', element: withSuspense(<AdminReportsPage />) },
+    ...supportRoutes,
     { path: 'push-notifications', element: withSuspense(<AdminPushNotificationsPage />) },
     { path: 'notifications', element: withSuspense(<NotificationsPage />) },
   ];
@@ -150,6 +174,9 @@ export const router = createBrowserRouter([
               { path: 'profile', element: withSuspense(<MemberProfilePage />) },
               { path: 'works', element: withSuspense(<WorksPage />) },
               { path: 'recent-activity', element: withSuspense(<MemberRecentActivityPage />) },
+              { path: 'support', element: withSuspense(<SupportTicketsListPage portalContext="member" />) },
+              { path: 'support/new', element: withSuspense(<SupportTicketNewPage portalContext="member" />) },
+              { path: 'support/:ticketId', element: withSuspense(<SupportTicketDetailPage portalContext="member" />) },
               { path: 'notifications', element: withSuspense(<NotificationsPage />) },
               { path: 'settings', element: withSuspense(<UserSettingsPage />) },
             ],
@@ -167,6 +194,9 @@ export const router = createBrowserRouter([
               { path: 'profile', element: withSuspense(<AssociationProfilePage />) },
               { path: 'applications', element: withSuspense(<AssociationApplicationsPage />) },
               { path: 'recent-activity', element: withSuspense(<AssociationRecentActivityPage />) },
+              { path: 'support', element: withSuspense(<SupportTicketsListPage portalContext="association" />) },
+              { path: 'support/new', element: withSuspense(<SupportTicketNewPage portalContext="association" />) },
+              { path: 'support/:ticketId', element: withSuspense(<SupportTicketDetailPage portalContext="association" />) },
               { path: 'notifications', element: withSuspense(<NotificationsPage />) },
               { path: 'settings', element: withSuspense(<UserSettingsPage />) },
             ],
@@ -184,6 +214,9 @@ export const router = createBrowserRouter([
               { path: 'onboarding', element: withSuspense(<InstitutionProfilePage />) },
               { path: 'declarations', element: withSuspense(<InstitutionDeclarationsPage />) },
               { path: 'recent-activities', element: withSuspense(<InstitutionRecentActivitiesPage />) },
+              { path: 'support', element: withSuspense(<SupportTicketsListPage portalContext="institution" />) },
+              { path: 'support/new', element: withSuspense(<SupportTicketNewPage portalContext="institution" />) },
+              { path: 'support/:ticketId', element: withSuspense(<SupportTicketDetailPage portalContext="institution" />) },
               { path: 'invoices', element: withSuspense(<InstitutionInvoicesPage />) },
               { path: 'licences', element: withSuspense(<InstitutionLicencesPage />) },
               { path: 'notifications', element: withSuspense(<NotificationsPage />) },
@@ -220,7 +253,7 @@ export const router = createBrowserRouter([
               { path: 'integrations', element: withSuspense(<SuperIntegrationsPage />) },
               { path: 'settings', element: withSuspense(<SuperSettingsPage />) },
               { path: 'account-settings', element: withSuspense(<UserSettingsPage />) },
-              ...sharedAdminPortalChildRoutes('members_initial'),
+              ...sharedAdminPortalChildRoutes('members_initial', 'legacy-redirect-only'),
             ],
           },
         ],

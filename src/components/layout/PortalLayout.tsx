@@ -59,6 +59,12 @@ function getSettingsRouteForPortal(portal: PortalKey) {
 
 function normalizeNotificationActionUrl(actionUrl: string) {
   if (actionUrl === '/member/application') return '/member/onboarding';
+  if (actionUrl.startsWith('/admin/support-tickets')) {
+    return `/admin/support${actionUrl.slice('/admin/support-tickets'.length)}`;
+  }
+  if (actionUrl.startsWith('/super-admin/support-tickets')) {
+    return `/admin/support${actionUrl.slice('/super-admin/support-tickets'.length)}`;
+  }
   return actionUrl;
 }
 
@@ -88,6 +94,8 @@ function getCategoryBadgeStyles(category?: string) {
     case 'approval':
     case 'governance':
       return 'border-[#FDE68A] bg-[#FFFBEB] text-[#B45309]';
+    case 'support':
+      return 'border-[#BFDBFE] bg-[#EFF6FF] text-[#1D4ED8] dark:border-sky-900 dark:bg-sky-950/40 dark:text-sky-300';
     default:
       return 'border-[#D0D5DD] bg-white dark:bg-slate-950 text-[#475467] dark:text-slate-300 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300';
   }

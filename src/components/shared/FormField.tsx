@@ -3,7 +3,7 @@ import { Eye, EyeOff } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { FieldError, FieldHint, FieldLabel } from '@/components/shared/FieldLabel';
 
-export const FormField = forwardRef<HTMLInputElement, React.InputHTMLAttributes<HTMLInputElement> & { label: string; error?: string; helperText?: string; requiredIndicator?: boolean; }>(function FormField({ label, error, helperText, className, requiredIndicator, ...props }, ref) {
+export const FormField = forwardRef<HTMLInputElement, React.InputHTMLAttributes<HTMLInputElement> & { label: string; error?: string; helperText?: string; requiredIndicator?: boolean; }>(function FormField({ label, error, helperText, className, requiredIndicator, children: _omitChildren, ...props }, ref) {
   const [passwordVisible, setPasswordVisible] = useState(false);
   const isPasswordField = props.type === 'password';
   const resolvedType = isPasswordField ? (passwordVisible ? 'text' : 'password') : props.type;
