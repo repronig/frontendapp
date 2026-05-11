@@ -296,7 +296,7 @@ export function WorksPage() {
         title={workModalMode === 'edit' ? 'Edit work' : 'Add work'}
         subtitle={
           workModalMode === 'edit'
-            ? 'Update bibliographic details, contributors, files, and agreement in one place.'
+            ? 'Update bibliographic details, contributors, files, and agreement in one place. '
             : 'Complete each step: work details, contributors, files, then agreement.'
         }
         size="lg"
