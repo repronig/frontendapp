@@ -49,6 +49,8 @@ export interface RegisterMemberPayload {
   applicant_type: 'author' | 'publisher';
   association_id: number;
   accepted_terms: boolean;
+  /** Required when API `RECAPTCHA_SECRET_KEY` is configured. */
+  recaptcha_token?: string;
 }
 
 export interface RegisterInstitutionPayload {
@@ -89,6 +91,8 @@ export interface RegisterInstitutionPayload {
   declared_members_count?: number;
   declared_branches_count?: number;
   accepted_terms: boolean;
+  /** Required when API `RECAPTCHA_SECRET_KEY` is configured. */
+  recaptcha_token?: string;
 }
 
 export interface ForgotPasswordPayload {

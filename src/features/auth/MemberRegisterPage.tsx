@@ -1,9 +1,10 @@
+import { useRef, type ComponentRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { useForm, type Resolver } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { toast } from 'sonner';
-import { registerMember } from '@/features/auth/api';
+import { registerMember, type RegisterMemberPayload } from '@/features/auth/api';
 import { getPublicAssociations } from '@/features/public/api';
 import { applyServerValidationErrorsToForm } from '@/utils/formServerErrors';
 import { AuthCard } from '@/features/auth/AuthCard';
@@ -12,10 +13,13 @@ import { FormField } from '@/components/shared/FormField';
 import { FormSelectField } from '@/components/shared/FormSelectField';
 import { TermsAgreementField } from '@/features/auth/TermsAgreementField';
 import { memberRegisterSchema, type MemberRegisterFormValues } from '@/features/auth/schemas';
+import { RecaptchaV2Checkbox } from '@/features/auth/RecaptchaV2Checkbox';
 import { queryKeys } from '@/lib/queryKeys';
+import { env } from '@/utils/env';
 
 export function MemberRegisterPage() {
   const navigate = useNavigate();
+  const recaptchaRef = useRef<ComponentRef<typeof RecaptchaV2Checkbox>>(null);
   const form = useForm<MemberRegisterFormValues>({
     resolver: zodResolver(memberRegisterSchema) as Resolver<MemberRegisterFormValues>,
     defaultValues: {
@@ -42,14 +46,27 @@ export function MemberRegisterPage() {
       toast.success(response.message || 'Account created. Please verify the OTP sent to your email.');
       navigate('/member/confirm-otp', { state: { email: values.email } });
       form.reset();
+      recaptchaRef.current?.reset();
     },
-    onError: (error) => toast.error(applyServerValidationErrorsToForm(form, error)),
+    onError: (error) => {
+      recaptchaRef.current?.reset();
+      toast.error(applyServerValidationErrorsToForm(form, error));
+    },
   });
 
   const isSubmitting = form.formState.isSubmitting || mutation.isPending;
 
   const handleRegistrationSubmit = async (values: MemberRegisterFormValues) => {
-    await mutation.mutateAsync(values);
+    let payload: RegisterMemberPayload = { ...values };
+    if (env.recaptchaSiteKey) {
+      const token = recaptchaRef.current?.getValue();
+      if (!token) {
+        toast.error('Please complete the reCAPTCHA.');
+        return;
+      }
+      payload = { ...payload, recaptcha_token: token };
+    }
+    await mutation.mutateAsync(payload);
   };
 
   return (
@@ -71,6 +88,7 @@ export function MemberRegisterPage() {
           <div className="auth-register-form-span-2">
             <TermsAgreementField audience="member" checked={form.watch('accepted_terms')} onChange={(checked) => form.setValue('accepted_terms', checked, { shouldValidate: true })} error={form.formState.errors.accepted_terms?.message} />
           </div>
+          <RecaptchaV2Checkbox ref={recaptchaRef} disabled={isSubmitting} />
           <div className="auth-register-form-span-2">
             <Button className="w-full" size="lg" type="submit" disabled={isSubmitting}>
               {isSubmitting ? 'Creating account...' : 'Create member account'}

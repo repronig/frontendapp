@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useRef, type ComponentRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { useForm, type Resolver } from 'react-hook-form';
@@ -14,10 +14,13 @@ import { FormSelectField } from '@/components/shared/FormSelectField';
 import { TermsAgreementField } from '@/features/auth/TermsAgreementField';
 import { INSTITUTION_REGISTER_TYPES, INSTITUTION_TYPE_OPTION_LABELS } from '@/features/auth/institutionTypes';
 import { institutionRegisterSchema, type InstitutionRegisterFormValues } from '@/features/auth/schemas';
+import { RecaptchaV2Checkbox } from '@/features/auth/RecaptchaV2Checkbox';
 import { queryKeys } from '@/lib/queryKeys';
+import { env } from '@/utils/env';
 
 export function InstitutionRegisterPage() {
   const navigate = useNavigate();
+  const recaptchaRef = useRef<ComponentRef<typeof RecaptchaV2Checkbox>>(null);
   const form = useForm<InstitutionRegisterFormValues>({
     resolver: zodResolver(institutionRegisterSchema) as Resolver<InstitutionRegisterFormValues>,
     defaultValues: {
@@ -77,14 +80,27 @@ export function InstitutionRegisterPage() {
     onSuccess: (response, values) => {
       toast.success(response.message);
       navigate('/institution/confirm-otp', { state: { email: values.email } });
+      recaptchaRef.current?.reset();
     },
-    onError: (error) => toast.error(applyServerValidationErrorsToForm(form, error)),
+    onError: (error) => {
+      recaptchaRef.current?.reset();
+      toast.error(applyServerValidationErrorsToForm(form, error));
+    },
   });
 
   const isSubmitting = form.formState.isSubmitting || mutation.isPending;
 
   const handleRegistrationSubmit = async (values: InstitutionRegisterFormValues) => {
-    await mutation.mutateAsync(buildPayload(values));
+    let payload = buildPayload(values);
+    if (env.recaptchaSiteKey) {
+      const token = recaptchaRef.current?.getValue();
+      if (!token) {
+        toast.error('Please complete the reCAPTCHA.');
+        return;
+      }
+      payload = { ...payload, recaptcha_token: token };
+    }
+    await mutation.mutateAsync(payload);
   };
 
   return (
@@ -133,6 +149,7 @@ export function InstitutionRegisterPage() {
           <div className="auth-register-form-span-2">
             <TermsAgreementField audience="institution" checked={form.watch('accepted_terms')} onChange={(checked) => form.setValue('accepted_terms', checked, { shouldValidate: true })} error={form.formState.errors.accepted_terms?.message} />
           </div>
+          <RecaptchaV2Checkbox ref={recaptchaRef} disabled={isSubmitting} />
           <div className="auth-register-form-span-2">
             <Button className="w-full" size="lg" type="submit" disabled={isSubmitting}>{isSubmitting ? 'Creating institution...' : 'Create institution account'}</Button>
           </div>

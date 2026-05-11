@@ -295,7 +295,7 @@ export function MemberApplicationPage() {
     <div className="space-y-6">
       <SectionHeader
         title="Membership and Mandate"
-        description="Fill and submit your application."
+        description="Fill and submit your mandate."
         actions={application ? <div className="flex items-center gap-2"><StatusBadge value={application.application_status} />{application.application_reference ? <span className="text-xs text-slate-500">Ref: {application.application_reference}</span> : null}</div> : null}
       />
 
@@ -457,9 +457,9 @@ export function MemberApplicationPage() {
       <Modal open={submissionSuccessOpen} onClose={() => setSubmissionSuccessOpen(false)} title="Application submitted" subtitle="Your membership application is now under affiliation validation." size="sm">
         <div className="space-y-4 text-sm leading-6 text-[#344054] dark:text-slate-200">
           <p>
-            Your application has been submitted. {selectedAssociationName} will now validate your affiliation, then admin will complete the final review.
+            Your application has been submitted. {selectedAssociationName} will now validate your affiliation with them, then REPRONIG Admin will complete the final review.
           </p>
-          <p>You will receive email and in-app updates when admin requests changes, rejects, or approves your application.</p>
+          <p>You will receive email and in-app updates when our admin requests changes, rejects, or approves your application.</p>
           <div className="flex justify-end">
             <Button type="button" onClick={() => setSubmissionSuccessOpen(false)}>Okay</Button>
           </div>
