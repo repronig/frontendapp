@@ -307,7 +307,7 @@ export function MemberApplicationPage() {
         />
       ) : null}
       {application && !hasAllKycDocuments && canEdit ? <Alert title="Application documents required" description={`Upload all required application documents before submitting: ${missingDocumentLabels.join(', ') || 'None'}.`} /> : null}
-      {application && !canEdit ? <Alert title="Editing is locked" description="This application is no longer editable in its current state. You can still review the details and uploaded documents below." /> : null}
+      {application && !canEdit ? <Alert title="Editing is locked" description="This application/mandate cannot be edited right now." /> : null}
 
       <Card className="space-y-5">
         <div className="grid gap-4 md:grid-cols-2">

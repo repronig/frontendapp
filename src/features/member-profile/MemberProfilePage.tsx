@@ -145,7 +145,7 @@ export function MemberProfilePage() {
           </div>
 
           {profile?.association?.name ? (
-            <Alert title="Association linked" description={`This member record is currently attached to ${profile.association.name}.`} />
+            <Alert title="Association linked" description={`Your membership record is currently attached to ${profile.association.name}.`} />
           ) : null}
 
           <form className="space-y-8" onSubmit={form.handleSubmit((values) => saveMutation.mutate(values))}>
