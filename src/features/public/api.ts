@@ -60,6 +60,12 @@ export interface PublicTermsResource {
 }
 
 export interface PublicPlatformSettings {
+  recaptcha: {
+    registration: {
+      required: boolean;
+      site_key: string | null;
+    };
+  };
   licensing: {
     default_currency: string;
     paystack_enabled: boolean;

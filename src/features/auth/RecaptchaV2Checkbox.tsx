@@ -3,20 +3,22 @@ import ReCAPTCHA from 'react-google-recaptcha';
 import { env } from '@/utils/env';
 
 type Props = {
+  /** From `GET /platform-settings` when the API exposes it; falls back to `VITE_RECAPTCHA_SITE_KEY`. */
+  siteKey?: string | null;
   /** When true, prevents interaction while the form is submitting. */
   disabled?: boolean;
 };
 
 /**
- * Google reCAPTCHA v2 “I’m not a robot” checkbox. Renders nothing when
- * `VITE_RECAPTCHA_SITE_KEY` is unset (local/dev without captcha).
+ * Google reCAPTCHA v2 “I’m not a robot” checkbox. Renders nothing when no site key is available
+ * (API `recaptcha.registration.site_key` or `VITE_RECAPTCHA_SITE_KEY`).
  */
 export const RecaptchaV2Checkbox = forwardRef<ElementRef<typeof ReCAPTCHA>, Props>(function RecaptchaV2Checkbox(
-  { disabled = false },
+  { siteKey: siteKeyProp, disabled = false },
   ref,
 ) {
-  const siteKey = env.recaptchaSiteKey;
-  if (!siteKey) {
+  const resolved = (typeof siteKeyProp === 'string' ? siteKeyProp.trim() : '') || env.recaptchaSiteKey.trim();
+  if (!resolved) {
     return null;
   }
 
@@ -24,7 +26,7 @@ export const RecaptchaV2Checkbox = forwardRef<ElementRef<typeof ReCAPTCHA>, Prop
     <div
       className={`auth-register-form-span-2 flex justify-center [&_.g-recaptcha]:origin-top [&_.g-recaptcha]:scale-[0.92] sm:[&_.g-recaptcha]:scale-100 ${disabled ? 'pointer-events-none opacity-60' : ''}`}
     >
-      <ReCAPTCHA ref={ref} sitekey={siteKey} theme="light" />
+      <ReCAPTCHA ref={ref} sitekey={resolved} theme="light" />
     </div>
   );
 });

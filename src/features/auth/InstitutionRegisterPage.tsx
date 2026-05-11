@@ -6,7 +6,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { toast } from 'sonner';
 import { registerInstitution, type RegisterInstitutionPayload } from '@/features/auth/api';
 import { applyServerValidationErrorsToForm } from '@/utils/formServerErrors';
-import { getCities, getStates } from '@/features/public/api';
+import { getCities, getPublicPlatformSettings, getStates } from '@/features/public/api';
 import { AuthCard } from '@/features/auth/AuthCard';
 import { Button } from '@/components/ui/button';
 import { FormField } from '@/components/shared/FormField';
@@ -15,6 +15,7 @@ import { TermsAgreementField } from '@/features/auth/TermsAgreementField';
 import { INSTITUTION_REGISTER_TYPES, INSTITUTION_TYPE_OPTION_LABELS } from '@/features/auth/institutionTypes';
 import { institutionRegisterSchema, type InstitutionRegisterFormValues } from '@/features/auth/schemas';
 import { RecaptchaV2Checkbox } from '@/features/auth/RecaptchaV2Checkbox';
+import { Alert } from '@/components/ui/alert';
 import { queryKeys } from '@/lib/queryKeys';
 import { env } from '@/utils/env';
 
@@ -48,6 +49,17 @@ export function InstitutionRegisterPage() {
   const statesQuery = useQuery({ queryKey: queryKeys.states, queryFn: async () => (await getStates()).data });
   const selectedStateId = useMemo(() => statesQuery.data?.find((row) => row.name === selectedState)?.id ?? null, [statesQuery.data, selectedState]);
   const citiesQuery = useQuery({ queryKey: queryKeys.citiesForState(selectedStateId), queryFn: async () => (await getCities(selectedStateId as number)).data, enabled: Boolean(selectedStateId) });
+
+  const platformSettingsQuery = useQuery({
+    queryKey: queryKeys.publicPlatformSettings,
+    queryFn: async () => (await getPublicPlatformSettings()).data,
+  });
+  const recReg = platformSettingsQuery.data?.recaptcha?.registration;
+  const resolvedRecaptchaSiteKey =
+    (recReg?.site_key && recReg.site_key.trim() !== '' ? recReg.site_key : '') ||
+    (env.recaptchaSiteKey.trim() !== '' ? env.recaptchaSiteKey : '');
+  const recaptchaRequiredByApi = Boolean(recReg?.required);
+  const recaptchaMisconfigured = recaptchaRequiredByApi && !resolvedRecaptchaSiteKey;
 
   const buildPayload = (values: InstitutionRegisterFormValues): RegisterInstitutionPayload => {
     const payload: RegisterInstitutionPayload = {
@@ -92,7 +104,7 @@ export function InstitutionRegisterPage() {
 
   const handleRegistrationSubmit = async (values: InstitutionRegisterFormValues) => {
     let payload = buildPayload(values);
-    if (env.recaptchaSiteKey) {
+    if (resolvedRecaptchaSiteKey) {
       const token = recaptchaRef.current?.getValue();
       if (!token) {
         toast.error('Please complete the reCAPTCHA.');
@@ -106,6 +118,14 @@ export function InstitutionRegisterPage() {
   return (
     <AuthCard mode="register" title="Institution Registration" subtitle="Create an institution account and start onboarding.">
       <div className="relative">
+        {recaptchaMisconfigured ? (
+          <div className="mb-4">
+            <Alert
+              title="Registration is temporarily unavailable"
+              description="The server requires reCAPTCHA but no site key is configured. Set RECAPTCHA_SITE_KEY on the API (and RECAPTCHA_SECRET_KEY) or add VITE_RECAPTCHA_SITE_KEY to the web build."
+            />
+          </div>
+        ) : null}
         <form className="auth-register-form" onSubmit={form.handleSubmit(handleRegistrationSubmit)} aria-busy={isSubmitting}>
           <div className="auth-register-form-span-2">
             <FormField label="Organisation name" requiredIndicator {...form.register('organisation_name')} error={form.formState.errors.organisation_name?.message} />
@@ -149,9 +169,11 @@ export function InstitutionRegisterPage() {
           <div className="auth-register-form-span-2">
             <TermsAgreementField audience="institution" checked={form.watch('accepted_terms')} onChange={(checked) => form.setValue('accepted_terms', checked, { shouldValidate: true })} error={form.formState.errors.accepted_terms?.message} />
           </div>
-          <RecaptchaV2Checkbox ref={recaptchaRef} disabled={isSubmitting} />
+          <RecaptchaV2Checkbox ref={recaptchaRef} siteKey={resolvedRecaptchaSiteKey || undefined} disabled={isSubmitting} />
           <div className="auth-register-form-span-2">
-            <Button className="w-full" size="lg" type="submit" disabled={isSubmitting}>{isSubmitting ? 'Creating institution...' : 'Create institution account'}</Button>
+            <Button className="w-full" size="lg" type="submit" disabled={isSubmitting || recaptchaMisconfigured}>
+              {isSubmitting ? 'Creating institution...' : 'Create institution account'}
+            </Button>
           </div>
         </form>
         {isSubmitting ? (

@@ -5,7 +5,7 @@ import { useForm, type Resolver } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { toast } from 'sonner';
 import { registerMember, type RegisterMemberPayload } from '@/features/auth/api';
-import { getPublicAssociations } from '@/features/public/api';
+import { getPublicAssociations, getPublicPlatformSettings } from '@/features/public/api';
 import { applyServerValidationErrorsToForm } from '@/utils/formServerErrors';
 import { AuthCard } from '@/features/auth/AuthCard';
 import { Button } from '@/components/ui/button';
@@ -14,6 +14,7 @@ import { FormSelectField } from '@/components/shared/FormSelectField';
 import { TermsAgreementField } from '@/features/auth/TermsAgreementField';
 import { memberRegisterSchema, type MemberRegisterFormValues } from '@/features/auth/schemas';
 import { RecaptchaV2Checkbox } from '@/features/auth/RecaptchaV2Checkbox';
+import { Alert } from '@/components/ui/alert';
 import { queryKeys } from '@/lib/queryKeys';
 import { env } from '@/utils/env';
 
@@ -40,6 +41,18 @@ export function MemberRegisterPage() {
     queryFn: () => getPublicAssociations({ per_page: 100 }),
   });
 
+  const platformSettingsQuery = useQuery({
+    queryKey: queryKeys.publicPlatformSettings,
+    queryFn: async () => (await getPublicPlatformSettings()).data,
+  });
+
+  const recReg = platformSettingsQuery.data?.recaptcha?.registration;
+  const resolvedRecaptchaSiteKey =
+    (recReg?.site_key && recReg.site_key.trim() !== '' ? recReg.site_key : '') ||
+    (env.recaptchaSiteKey.trim() !== '' ? env.recaptchaSiteKey : '');
+  const recaptchaRequiredByApi = Boolean(recReg?.required);
+  const recaptchaMisconfigured = recaptchaRequiredByApi && !resolvedRecaptchaSiteKey;
+
   const mutation = useMutation({
     mutationFn: registerMember,
     onSuccess: (response, values) => {
@@ -58,7 +71,7 @@ export function MemberRegisterPage() {
 
   const handleRegistrationSubmit = async (values: MemberRegisterFormValues) => {
     let payload: RegisterMemberPayload = { ...values };
-    if (env.recaptchaSiteKey) {
+    if (resolvedRecaptchaSiteKey) {
       const token = recaptchaRef.current?.getValue();
       if (!token) {
         toast.error('Please complete the reCAPTCHA.');
@@ -72,6 +85,14 @@ export function MemberRegisterPage() {
   return (
     <AuthCard mode="register" title="Member Registration" subtitle="Create a member account and begin onboarding.">
       <div className="relative">
+        {recaptchaMisconfigured ? (
+          <div className="mb-4">
+            <Alert
+              title="Registration is temporarily unavailable"
+              description="The server requires reCAPTCHA but no site key is configured. Set RECAPTCHA_SITE_KEY on the API (and RECAPTCHA_SECRET_KEY) or add VITE_RECAPTCHA_SITE_KEY to the web build."
+            />
+          </div>
+        ) : null}
         <form className="auth-register-form" onSubmit={form.handleSubmit(handleRegistrationSubmit)} aria-busy={isSubmitting}>
           <FormField label="First name" requiredIndicator {...form.register('first_name')} error={form.formState.errors.first_name?.message} />
           <FormField label="Last name" requiredIndicator {...form.register('last_name')} error={form.formState.errors.last_name?.message} />
@@ -88,9 +109,9 @@ export function MemberRegisterPage() {
           <div className="auth-register-form-span-2">
             <TermsAgreementField audience="member" checked={form.watch('accepted_terms')} onChange={(checked) => form.setValue('accepted_terms', checked, { shouldValidate: true })} error={form.formState.errors.accepted_terms?.message} />
           </div>
-          <RecaptchaV2Checkbox ref={recaptchaRef} disabled={isSubmitting} />
+          <RecaptchaV2Checkbox ref={recaptchaRef} siteKey={resolvedRecaptchaSiteKey || undefined} disabled={isSubmitting} />
           <div className="auth-register-form-span-2">
-            <Button className="w-full" size="lg" type="submit" disabled={isSubmitting}>
+            <Button className="w-full" size="lg" type="submit" disabled={isSubmitting || recaptchaMisconfigured}>
               {isSubmitting ? 'Creating account...' : 'Create member account'}
             </Button>
           </div>
