@@ -165,7 +165,7 @@ export function AdminDeclarationsPage() {
 
   return (
     <div className="space-y-6">
-      <SectionHeader title="Declarations" description="Annual institution declarations." actions={<Button variant="outline" disabled={isExporting} onClick={async () => { try { setIsExporting(true); const response = await downloadAdminDeclarationsExport({ search: search || undefined, status: effectiveStatus, date_from: dateFrom || undefined, date_to: dateTo || undefined }); triggerBlobDownload(response.blob, response.filename); showAdminExportSuccess('Declarations'); } catch { showAdminExportError('Declarations'); } finally { setIsExporting(false); } }}>{isExporting ? 'Exporting…' : 'Export CSV'}</Button>} />
+      <SectionHeader title="Declarations" description="Annual institution declarations. " actions={<Button variant="outline" disabled={isExporting} onClick={async () => { try { setIsExporting(true); const response = await downloadAdminDeclarationsExport({ search: search || undefined, status: effectiveStatus, date_from: dateFrom || undefined, date_to: dateTo || undefined }); triggerBlobDownload(response.blob, response.filename); showAdminExportSuccess('Declarations'); } catch { showAdminExportError('Declarations'); } finally { setIsExporting(false); } }}>{isExporting ? 'Exporting…' : 'Export CSV'}</Button>} />
 
       <p className="text-sm text-[#667085] dark:text-slate-300">{tabHelperText}</p>
       <ListCountSummary meta={activeMeta} subject={countSubject} helper={countHelper} />
