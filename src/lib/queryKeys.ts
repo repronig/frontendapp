@@ -65,6 +65,7 @@ export const queryKeys = {
   adminDeclaration: (id: number | null) => ['admin-declaration', id] as const,
   adminGovernanceInstitutions: ['admin-governance-institutions'] as const,
   adminAssociations: ['admin-associations'] as const,
+  adminAssociationOfficers: (associationId: number) => ['admin-association-officers', associationId] as const,
   adminInstitution: (id: number | null) => ['admin-institution', id] as const,
   adminInstitutionDeclarations: (id: number | null) => ['admin-institution-declarations', id] as const,
   adminInstitutionInvoices: (id: number | null) => ['admin-institution-invoices', id] as const,

@@ -20,6 +20,7 @@ import type {
   SupportTicketReplyResource,
   SupportTicketResource,
   TimelineEventResource,
+  UserResource,
   AssociationResource,
   UsageDeclarationResource,
   WorkContributorResource,
@@ -496,6 +497,28 @@ export async function listAdminAssociations(params: ListParams = {}) {
 
 export async function getAdminAssociation(id: number) {
   const { data } = await apiClient.get<ApiSuccess<AssociationResource>>(`/admin/associations/${id}`);
+  return data;
+}
+
+export async function listAdminAssociationOfficers(associationId: number) {
+  const { data } = await apiClient.get<ApiSuccess<UserResource[]>>(`/admin/associations/${associationId}/officers`);
+  return data;
+}
+
+export interface UpdateAdminAssociationOfficerPayload {
+  email?: string;
+  password?: string;
+}
+
+export async function updateAdminAssociationOfficer(
+  associationId: number,
+  userId: number,
+  payload: UpdateAdminAssociationOfficerPayload,
+) {
+  const { data } = await apiClient.patch<ApiSuccess<UserResource>>(
+    `/admin/associations/${associationId}/officers/${userId}`,
+    payload,
+  );
   return data;
 }
 

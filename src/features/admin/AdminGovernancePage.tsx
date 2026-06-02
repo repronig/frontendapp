@@ -33,6 +33,7 @@ import {
   listAdminTimeline,
   uploadAdminAssociationLogo,
 } from '@/features/admin/api';
+import { AssociationOfficersPanel } from '@/features/admin/AssociationOfficersPanel';
 import { confirmAdminSensitiveAction } from '@/features/admin/security';
 import { showAdminActionError, showAdminActionSuccess, showAdminExportError, showAdminExportSuccess } from '@/features/admin/action-feedback';
 import { triggerBlobDownload } from '@/utils/download';
@@ -678,6 +679,10 @@ export function AdminGovernancePage() {
                 <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Submitted documents</p>
                 <DocumentsTable documents={association.kyc_documents ?? []} />
               </div>
+            </GovernanceSection>
+
+            <GovernanceSection title="Association officers" description="Portal users who manage this association. Admins can update officer login email and password.">
+              <AssociationOfficersPanel associationId={association.id} />
             </GovernanceSection>
 
             <GovernanceSection title="Compliance — Membership pipeline" description="Latest member applications attributed to this association.">

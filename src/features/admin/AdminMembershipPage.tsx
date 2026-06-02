@@ -369,9 +369,9 @@ export function AdminMembershipPage({ initialTab = 'members', institutionOnly = 
   const associationFilterId = parsedAssociationId && parsedAssociationId > 0 ? parsedAssociationId : undefined;
 
   const associationsForFilterQuery = useQuery({
-    queryKey: [...queryKeys.adminAssociations, 'members-filter'],
+    queryKey: [...queryKeys.adminAssociations, 'membership-filter'],
     queryFn: async () => listAdminAssociations({ page: 1, per_page: 100 }),
-    enabled: !institutionOnly && tab === 'members',
+    enabled: !institutionOnly && (tab === 'members' || tab === 'applications'),
   });
 
   const associationFilterOptions = useMemo(() => {
@@ -396,7 +396,20 @@ export function AdminMembershipPage({ initialTab = 'members', institutionOnly = 
           ]
   ), [institutionOnly, isSuperAdminPortal]);
 
-  const appsQuery = usePaginatedList({ queryKey: [...queryKeys.adminMemberApps, page, perPage, search, status, dateFrom, dateTo], queryFn: listAdminMemberApplications, params: { page, per_page: perPage, search: search || undefined, status: status || undefined, date_from: dateFrom || undefined, date_to: dateTo || undefined }, enabled: !institutionOnly && tab === 'applications' });
+  const appsQuery = usePaginatedList({
+    queryKey: [...queryKeys.adminMemberApps, page, perPage, search, status, dateFrom, dateTo, associationId],
+    queryFn: listAdminMemberApplications,
+    params: {
+      page,
+      per_page: perPage,
+      search: search || undefined,
+      status: status || undefined,
+      date_from: dateFrom || undefined,
+      date_to: dateTo || undefined,
+      association_id: associationFilterId,
+    },
+    enabled: !institutionOnly && tab === 'applications',
+  });
   const membersQuery = usePaginatedList({
     queryKey: [...queryKeys.adminMembers, page, perPage, search, status, dateFrom, dateTo, associationId],
     queryFn: listAdminMembers,
@@ -625,7 +638,7 @@ export function AdminMembershipPage({ initialTab = 'members', institutionOnly = 
             setAssociationId('');
           }}
         />
-        {tab === 'members' ? (
+        {tab === 'members' || tab === 'applications' ? (
           <div className="flex flex-wrap items-center gap-3 rounded-md border border-[#EAECF0] bg-white p-3 panel-shadow dark:border-slate-800 dark:bg-slate-950">
             <label className="flex min-w-[240px] flex-1 flex-col gap-2 text-sm font-medium text-[#344054] dark:text-slate-200 sm:max-w-sm">
               Association
@@ -635,7 +648,8 @@ export function AdminMembershipPage({ initialTab = 'members', institutionOnly = 
                   setAssociationId(event.target.value);
                   setPage(1);
                 }}
-                className="h-12 w-full rounded-md border border-[#222222] bg-white px-4 text-base dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+                disabled={associationsForFilterQuery.isLoading}
+                className="h-12 w-full rounded-md border border-[#222222] bg-white px-4 text-base dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 disabled:opacity-60"
               >
                 {associationFilterOptions.map((option) => (
                   <option key={option.value || 'all'} value={option.value}>
@@ -652,6 +666,7 @@ export function AdminMembershipPage({ initialTab = 'members', institutionOnly = 
         { key: 'applicant', header: 'Applicant', render: (row: MemberApplicationResource) => <div><p className="font-semibold">{row.user?.name ?? row.user?.email ?? '—'}</p><p className="mt-1 text-sm text-[#6B788E] dark:text-slate-300">{row.user?.email ?? 'No email'}{row.user?.phone ? ` • ${row.user.phone}` : ''}</p></div> },
         { key: 'id', header: 'Application ID', render: (row: MemberApplicationResource) => <div><p className="font-semibold">{row.external_id ?? `#${row.id}`}</p><p className="mt-1 text-sm text-[#6B788E] dark:text-slate-300">{[row.applicant_type_label ?? row.applicant_type ?? null, row.submission_stage_label ?? row.submission_stage ?? null, row.diaspora_label].filter(Boolean).join(' • ') || 'No stage available'}</p></div> },
         { key: 'type', header: 'Type', render: (row: MemberApplicationResource) => row.applicant_type_label ?? row.applicant_type ?? '—' },
+        { key: 'association', header: 'Association', render: (row: MemberApplicationResource) => row.association?.name ?? '—' },
         { key: 'status', header: 'Status', render: (row: MemberApplicationResource) => <StatusBadge value={row.application_status} label={row.application_status_label} /> },
       ]} rows={currentRows as MemberApplicationResource[]} isLoading={appsQuery.isLoading} loadingTitle="Loading member applications" loadingDescription="The latest applications are being fetched from the backend." onRowClick={(row) => openModal((row as MemberApplicationResource).id)} selectedRowKey={tab === 'applications' ? selectedId ?? undefined : undefined} getRowKey={(row) => (row as MemberApplicationResource).id} /> : null}
 
