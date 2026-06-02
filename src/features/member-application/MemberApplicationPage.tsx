@@ -421,7 +421,7 @@ export function MemberApplicationPage() {
                                 className="mt-2 text-sm font-semibold text-[#AF1512] underline-offset-2 hover:underline"
                                 onClick={() => setDocumentWhyType(documentType.value)}
                               >
-                                Why this document?
+                                Why do I need to submit this document?
                               </button>
                             </div>
                             {existingDocument ? <StatusBadge value="uploaded" label="Uploaded" /> : null}
