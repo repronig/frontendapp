@@ -34,7 +34,15 @@ const blankForm = {
   roles: '',
 };
 
+const adminCreatePreset = {
+  ...blankForm,
+  account_type: 'admin',
+  roles: 'admin',
+  status: 'active',
+};
+
 type ViewMode = 'create' | 'edit' | 'view' | null;
+type CreateMode = 'generic' | 'admin';
 
 type SuperUserFormFieldErrors = Partial<Record<'first_name' | 'last_name' | 'email' | 'phone' | 'password' | 'roles', string>>;
 
@@ -51,6 +59,7 @@ function UserForm({
   isActivating,
   isDeactivating,
   canManageState,
+  adminPreset = false,
 }: {
   mode: 'create' | 'edit';
   form: typeof blankForm;
@@ -64,6 +73,7 @@ function UserForm({
   isActivating: boolean;
   isDeactivating: boolean;
   canManageState: boolean;
+  adminPreset?: boolean;
 }) {
   return (
     <div className="space-y-5">
@@ -73,13 +83,25 @@ function UserForm({
         <FormField label="Email" requiredIndicator type="email" value={form.email} error={fieldErrors.email} onChange={(event) => { clearFieldError('email'); setForm((current) => ({ ...current, email: event.target.value })); }} />
         <FormField label="Phone" value={form.phone} error={fieldErrors.phone} onChange={(event) => { clearFieldError('phone'); setForm((current) => ({ ...current, phone: event.target.value })); }} helperText="Optional. Must be unique across accounts when provided." />
         <FormField label={mode === 'create' ? 'Password' : 'New password (optional)'} requiredIndicator={mode === 'create'} type="password" value={form.password} error={fieldErrors.password} onChange={(event) => { clearFieldError('password'); setForm((current) => ({ ...current, password: event.target.value })); }} />
-        <FormField label="Roles (comma separated)" requiredIndicator value={form.roles} error={fieldErrors.roles} onChange={(event) => { clearFieldError('roles'); setForm((current) => ({ ...current, roles: event.target.value })); }} helperText="Example: admin, report_viewer" />
+        <FormField
+          label="Roles (comma separated)"
+          requiredIndicator
+          value={form.roles}
+          error={fieldErrors.roles}
+          onChange={(event) => { clearFieldError('roles'); setForm((current) => ({ ...current, roles: event.target.value })); }}
+          helperText={adminPreset && mode === 'create' ? 'Preset: admin role for platform admin portal access.' : 'Example: admin, report_viewer'}
+        />
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">
         <label className="block space-y-2">
           <span className="text-[15px] font-semibold text-[#2B2B2D] dark:text-slate-100">Account type<span className="ml-1 text-red-600 dark:text-red-400">*</span></span>
-          <select value={form.account_type} onChange={(event) => setForm((current) => ({ ...current, account_type: event.target.value }))} className="h-11 w-full rounded-xl border border-slate-300 bg-white dark:bg-slate-950 px-3 text-sm">
+          <select
+            value={form.account_type}
+            onChange={(event) => setForm((current) => ({ ...current, account_type: event.target.value }))}
+            disabled={adminPreset && mode === 'create'}
+            className="h-11 w-full rounded-xl border border-slate-300 bg-white dark:bg-slate-950 px-3 text-sm disabled:cursor-not-allowed disabled:opacity-70"
+          >
             {['member', 'association_officer', 'institution_user', 'admin', 'super_admin'].map((value) => <option key={value} value={value}>{formatDisplayLabel(value)}</option>)}
           </select>
         </label>
@@ -107,6 +129,7 @@ export function SuperUsersPage() {
   const [status, setStatus] = useState('');
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [modalMode, setModalMode] = useState<ViewMode>(null);
+  const [createMode, setCreateMode] = useState<CreateMode>('generic');
   const [form, setForm] = useState(blankForm);
   const [userFormErrors, setUserFormErrors] = useState<SuperUserFormFieldErrors>({});
   const [actionMode, setActionMode] = useState<'activate' | 'deactivate' | null>(null);
@@ -139,10 +162,11 @@ export function SuperUsersPage() {
     [detailQuery.data, listQuery.data, selectedId],
   );
 
-  function openCreateModal() {
+  function openCreateModal(preset: CreateMode = 'generic') {
     setSelectedId(null);
+    setCreateMode(preset);
     setModalMode('create');
-    setForm(blankForm);
+    setForm(preset === 'admin' ? adminCreatePreset : blankForm);
     setUserFormErrors({});
   }
 
@@ -232,7 +256,12 @@ export function SuperUsersPage() {
       <SectionHeader
         title="User management"
         description="Platform user accounts."
-        action={<Button onClick={openCreateModal}>New user</Button>}
+        action={(
+          <div className="flex flex-wrap gap-2">
+            <Button onClick={() => openCreateModal('admin')}>Create admin</Button>
+            <Button variant="outline" onClick={() => openCreateModal('generic')}>New user</Button>
+          </div>
+        )}
       />
       <SearchFilterBar search={search} onSearchChange={(value) => { setSearch(value); setPage(1); }} status={status} onStatusChange={(value) => { setStatus(value); setPage(1); }} searchPlaceholder="Search by name, email, or phone" onReset={() => { setSearch(''); setStatus(''); setPage(1); }} />
 
@@ -263,8 +292,14 @@ export function SuperUsersPage() {
       <Modal
         open={modalMode !== null}
         onClose={closeModal}
-        title={modalMode === 'create' ? 'Create user' : modalMode === 'edit' ? 'Edit user' : 'User details'}
-        subtitle={modalMode === 'view' ? 'Review account details and recent state changes in one modal.' : 'User creation and editing happen in a modal instead of beside the list.'}
+        title={modalMode === 'create' ? (createMode === 'admin' ? 'Create admin account' : 'Create user') : modalMode === 'edit' ? 'Edit user' : 'User details'}
+        subtitle={
+          modalMode === 'view'
+            ? 'Review account details and recent state changes in one modal.'
+            : modalMode === 'create' && createMode === 'admin'
+              ? 'Admin account with the admin role preset. Set a password and adjust details before saving.'
+              : 'User creation and editing happen in a modal instead of beside the list.'
+        }
         size={modalMode === 'view' ? 'lg' : 'md'}
       >
         {modalMode === 'view' ? (
@@ -303,6 +338,7 @@ export function SuperUsersPage() {
             isActivating={activateMutation.isPending}
             isDeactivating={deactivateMutation.isPending}
             canManageState={modalMode === 'edit' && Boolean(selectedId)}
+            adminPreset={modalMode === 'create' && createMode === 'admin'}
           />
         )}
       </Modal>

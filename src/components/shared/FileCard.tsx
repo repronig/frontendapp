@@ -10,6 +10,7 @@ export function FileCard({
   subtitle,
   fileUrl,
   downloadUrl,
+  viewOnly = false,
   onDelete,
   onPreview,
   deleting = false,
@@ -18,13 +19,15 @@ export function FileCard({
   subtitle?: string;
   fileUrl?: string | null;
   downloadUrl?: string | null;
+  /** Hide download actions (e.g. association portal view-only documents). */
+  viewOnly?: boolean;
   onDelete?: () => void;
   onPreview?: () => void;
   deleting?: boolean;
 }) {
   const [previewOpen, setPreviewOpen] = useState(false);
   const resolvedFileUrl = resolveFileUrl(fileUrl);
-  const resolvedDownloadUrl = resolveFileUrl(downloadUrl);
+  const resolvedDownloadUrl = viewOnly ? null : resolveFileUrl(downloadUrl);
   const previewHandler = onPreview ?? (resolvedFileUrl ? () => setPreviewOpen(true) : undefined);
 
   return (
@@ -70,6 +73,7 @@ export function FileCard({
           onClose={() => setPreviewOpen(false)}
           url={resolvedFileUrl}
           downloadUrl={resolvedDownloadUrl}
+          viewOnly={viewOnly}
           title={title}
         />
       ) : null}

@@ -20,7 +20,7 @@ import { SectionHeader } from '@/components/shared/SectionHeader';
 import { StatusBadge } from '@/components/shared/StatusBadge';
 import { approvalActionButtonClass } from '@/components/shared/tableActionStyles';
 import { StatusHelperGrid } from '@/components/shared/StatusHelperGrid';
-import { approveAdminInstitution, approveAdminMemberApplication, deactivateAdminInstitution, downloadAdminInstitutionsExport, downloadAdminMembersExport, getAdminInstitution, getAdminMember, getAdminMemberApplication, listAdminInstitutions, listAdminMemberApplications, listAdminMembers, listAdminTimeline, reactivateAdminInstitution, rejectAdminInstitution, rejectAdminMemberApplication, requestChangesAdminMemberApplication } from '@/features/admin/api';
+import { approveAdminInstitution, approveAdminMemberApplication, deactivateAdminInstitution, downloadAdminInstitutionsExport, downloadAdminMembersExport, getAdminInstitution, getAdminMember, getAdminMemberApplication, listAdminAssociations, listAdminInstitutions, listAdminMemberApplications, listAdminMembers, listAdminTimeline, reactivateAdminInstitution, rejectAdminInstitution, rejectAdminMemberApplication, requestChangesAdminMemberApplication } from '@/features/admin/api';
 import { usePaginatedList } from '@/hooks/usePaginatedList';
 import type { AssociationResource, InstitutionProfileResource, MemberApplicationResource, MemberProfileResource, UserResource } from '@/types/domain';
 import { confirmAdminSensitiveAction } from '@/features/admin/security';
@@ -362,7 +362,25 @@ export function AdminMembershipPage({ initialTab = 'members', institutionOnly = 
   const [institutionAction, setInstitutionAction] = useState<InstitutionAction>(null);
   const [documentLightbox, setDocumentLightbox] = useState<{ title: string; url: string; fileName?: string | null } | null>(null);
   const [applicationAction, setApplicationAction] = useState<ApplicationAction>(null);
+  const [associationId, setAssociationId] = useState('');
   const [isExporting, setIsExporting] = useState(false);
+
+  const parsedAssociationId = associationId ? Number(associationId) : undefined;
+  const associationFilterId = parsedAssociationId && parsedAssociationId > 0 ? parsedAssociationId : undefined;
+
+  const associationsForFilterQuery = useQuery({
+    queryKey: [...queryKeys.adminAssociations, 'members-filter'],
+    queryFn: async () => listAdminAssociations({ page: 1, per_page: 100 }),
+    enabled: !institutionOnly && tab === 'members',
+  });
+
+  const associationFilterOptions = useMemo(() => {
+    const rows = associationsForFilterQuery.data?.data ?? [];
+    return [
+      { label: 'All associations', value: '' },
+      ...rows.map((a) => ({ label: a.name, value: String(a.id) })),
+    ];
+  }, [associationsForFilterQuery.data?.data]);
 
   const tabs = useMemo(() => (
     institutionOnly
@@ -379,7 +397,20 @@ export function AdminMembershipPage({ initialTab = 'members', institutionOnly = 
   ), [institutionOnly, isSuperAdminPortal]);
 
   const appsQuery = usePaginatedList({ queryKey: [...queryKeys.adminMemberApps, page, perPage, search, status, dateFrom, dateTo], queryFn: listAdminMemberApplications, params: { page, per_page: perPage, search: search || undefined, status: status || undefined, date_from: dateFrom || undefined, date_to: dateTo || undefined }, enabled: !institutionOnly && tab === 'applications' });
-  const membersQuery = usePaginatedList({ queryKey: [...queryKeys.adminMembers, page, perPage, search, status, dateFrom, dateTo], queryFn: listAdminMembers, params: { page, per_page: perPage, search: search || undefined, status: status || undefined, date_from: dateFrom || undefined, date_to: dateTo || undefined }, enabled: !institutionOnly && tab === 'members' });
+  const membersQuery = usePaginatedList({
+    queryKey: [...queryKeys.adminMembers, page, perPage, search, status, dateFrom, dateTo, associationId],
+    queryFn: listAdminMembers,
+    params: {
+      page,
+      per_page: perPage,
+      search: search || undefined,
+      approval_status: status || undefined,
+      date_from: dateFrom || undefined,
+      date_to: dateTo || undefined,
+      association_id: associationFilterId,
+    },
+    enabled: !institutionOnly && tab === 'members',
+  });
   const institutionsQuery = usePaginatedList({ queryKey: [...queryKeys.adminInstitutions, page, perPage, search, status, dateFrom, dateTo], queryFn: listAdminInstitutions, params: { page, per_page: perPage, search: search || undefined, status: status || undefined, date_from: dateFrom || undefined, date_to: dateTo || undefined }, enabled: tab === 'institutions' });
 
   const appDetailQuery = useQuery({ queryKey: queryKeys.adminMemberApp(selectedId), queryFn: async () => getAdminMemberApplication(selectedId as number), enabled: !institutionOnly && tab === 'applications' && Boolean(selectedId) && modalOpen });
@@ -530,7 +561,13 @@ export function AdminMembershipPage({ initialTab = 'members', institutionOnly = 
               try {
                 setIsExporting(true);
                 const response = tab === 'members'
-                  ? await downloadAdminMembersExport({ search: search || undefined, approval_status: status || undefined, date_from: dateFrom || undefined, date_to: dateTo || undefined })
+                  ? await downloadAdminMembersExport({
+                      search: search || undefined,
+                      approval_status: status || undefined,
+                      association_id: associationFilterId,
+                      date_from: dateFrom || undefined,
+                      date_to: dateTo || undefined,
+                    })
                   : await downloadAdminInstitutionsExport({ search: search || undefined, account_status: status || undefined, date_from: dateFrom || undefined, date_to: dateTo || undefined });
                 triggerBlobDownload(response.blob, response.filename);
                 showAdminExportSuccess(tab === 'members' ? 'Members' : 'Institutions');
@@ -557,6 +594,7 @@ export function AdminMembershipPage({ initialTab = 'members', institutionOnly = 
                 setPage(1);
                 setSearch('');
                 setStatus('');
+                setAssociationId('');
                 setDateFrom('');
                 setDateTo('');
                 setUrlTab(item.key);
@@ -571,7 +609,44 @@ export function AdminMembershipPage({ initialTab = 'members', institutionOnly = 
       {tab !== 'institutions' ? <p className="text-sm text-[#667085] dark:text-slate-300">{tabHelperText}</p> : null}
       <ListCountSummary meta={meta} subject={countSubject} helper={countHelper} />
 
-      <SearchFilterBar search={search} onSearchChange={setSearch} status={status} onStatusChange={setStatus} searchPlaceholder={searchPlaceholder} dateFrom={dateFrom} dateTo={dateTo} onDateFromChange={setDateFrom} onDateToChange={setDateTo} onReset={resetFilters} />
+      <div className="flex flex-col gap-3">
+        <SearchFilterBar
+          search={search}
+          onSearchChange={setSearch}
+          status={status}
+          onStatusChange={setStatus}
+          searchPlaceholder={searchPlaceholder}
+          dateFrom={dateFrom}
+          dateTo={dateTo}
+          onDateFromChange={setDateFrom}
+          onDateToChange={setDateTo}
+          onReset={() => {
+            resetFilters();
+            setAssociationId('');
+          }}
+        />
+        {tab === 'members' ? (
+          <div className="flex flex-wrap items-center gap-3 rounded-md border border-[#EAECF0] bg-white p-3 panel-shadow dark:border-slate-800 dark:bg-slate-950">
+            <label className="flex min-w-[240px] flex-1 flex-col gap-2 text-sm font-medium text-[#344054] dark:text-slate-200 sm:max-w-sm">
+              Association
+              <select
+                value={associationId}
+                onChange={(event) => {
+                  setAssociationId(event.target.value);
+                  setPage(1);
+                }}
+                className="h-12 w-full rounded-md border border-[#222222] bg-white px-4 text-base dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+              >
+                {associationFilterOptions.map((option) => (
+                  <option key={option.value || 'all'} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+        ) : null}
+      </div>
 
       {tab === 'applications' ? <DataTable columns={[
         { key: 'applicant', header: 'Applicant', render: (row: MemberApplicationResource) => <div><p className="font-semibold">{row.user?.name ?? row.user?.email ?? '—'}</p><p className="mt-1 text-sm text-[#6B788E] dark:text-slate-300">{row.user?.email ?? 'No email'}{row.user?.phone ? ` • ${row.user.phone}` : ''}</p></div> },
@@ -660,7 +735,7 @@ export function AdminMembershipPage({ initialTab = 'members', institutionOnly = 
       <ActionDialog open={institutionAction === 'reactivate'} onClose={() => setInstitutionAction(null)} title="Reactivate institution" description="Restore institution access and clear the current deactivation state." actionLabel="Reactivate institution" showReason onConfirm={(reason) => { if (institutionDetail) reactivateMutation.mutate({ institution: institutionDetail, reason }); }} isSubmitting={reactivateMutation.isPending} />
       <ActionDialog open={applicationAction === 'approve'} onClose={() => setApplicationAction(null)} title="Approve member application" description="Approve this member application and activate the member account." actionLabel="Approve application" onConfirm={() => { if (appDetailQuery.data?.data) approveApplicationMutation.mutate(appDetailQuery.data.data); }} isSubmitting={approveApplicationMutation.isPending} />
       <ActionDialog open={applicationAction === 'request_changes'} onClose={() => setApplicationAction(null)} title="Request changes" description="Request updates from the member before final approval." actionLabel="Request changes" showReason onConfirm={(comment) => { if (appDetailQuery.data?.data) requestChangesApplicationMutation.mutate({ application: appDetailQuery.data.data, comment }); }} isSubmitting={requestChangesApplicationMutation.isPending} />
-      <ActionDialog open={applicationAction === 'reject'} onClose={() => setApplicationAction(null)} title="Reject member application" description="Reject this member application with a reason." actionLabel="Reject application" actionVariant="destructive" showReason onConfirm={(reason) => { if (appDetailQuery.data?.data) rejectApplicationMutation.mutate({ application: appDetailQuery.data.data, reason }); }} isSubmitting={rejectApplicationMutation.isPending} />
+      <ActionDialog open={applicationAction === 'reject'} onClose={() => setApplicationAction(null)} title="Reject member application" description="Reject this member application with a reason." actionLabel="Reject application" actionVariant="destructive" showReason requireReason onConfirm={(reason) => { if (appDetailQuery.data?.data) rejectApplicationMutation.mutate({ application: appDetailQuery.data.data, reason }); }} isSubmitting={rejectApplicationMutation.isPending} />
     </div>
   );
 }

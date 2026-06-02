@@ -58,7 +58,10 @@ export function AssociationApplicationDetail({
       ) : null}
 
       <div className="space-y-3">
-        <h3 className="text-[16px] font-semibold text-[#182230]">Submitted documents</h3>
+        <h3 className="text-[16px] font-semibold text-[#182230] dark:text-slate-100">Submitted documents</h3>
+        <p className="text-sm text-[#6B788E] dark:text-slate-400">
+          Preview documents in the portal. Downloads are not available for association review.
+        </p>
         <div className="grid gap-4 md:grid-cols-2">
           {(application.documents ?? []).length ? (
             (application.documents ?? []).map((document) => (
@@ -67,7 +70,7 @@ export function AssociationApplicationDetail({
                 title={document.file_name ?? document.document_type ?? 'Application document'}
                 subtitle={`${document.document_type ?? 'Document'} · ${formatFileSize(document.file_size)} · ${formatDate(document.created_at)}`}
                 fileUrl={document.file_url}
-                downloadUrl={document.download_url}
+                viewOnly
               />
             ))
           ) : (

@@ -1,14 +1,14 @@
-import { useCallback, useEffect, useState } from 'react';
-import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { EmptyState } from '@/components/shared/EmptyState';
-import { FormField } from '@/components/shared/FormField';
 import { FieldError, FieldLabel } from '@/components/shared/FieldLabel';
 import { formatSupportTicketRef } from '@/features/support/formatTicketRef';
 import { FormTextareaField } from '@/components/shared/FormTextareaField';
 import { LoadingState } from '@/components/shared/LoadingState';
+import { Modal } from '@/components/shared/Modal';
 import { PaginationBar } from '@/components/shared/PaginationBar';
 import { SearchFilterBar } from '@/components/shared/SearchFilterBar';
 import { SectionHeader } from '@/components/shared/SectionHeader';
@@ -89,9 +89,14 @@ function PortalQueueBadge({ context }: { context?: SupportTicketPortalContext | 
   );
 }
 
+function parseTicketIdParam(ticketIdParam?: string): number | null {
+  if (!ticketIdParam) return null;
+  const id = Number.parseInt(ticketIdParam, 10);
+  return Number.isFinite(id) && id > 0 ? id : null;
+}
+
 export function AdminSupportTicketsPage() {
   const queryClient = useQueryClient();
-  const location = useLocation();
   const navigate = useNavigate();
   const { ticketId: ticketIdParam } = useParams<{ ticketId?: string }>();
   const [searchParams] = useSearchParams();
@@ -99,7 +104,9 @@ export function AdminSupportTicketsPage() {
   const [perPage, setPerPage] = useState(DEFAULT_PAGE_SIZE);
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState('');
-  const [selectedId, setSelectedId] = useState<number | null>(null);
+
+  const selectedId = useMemo(() => parseTicketIdParam(ticketIdParam), [ticketIdParam]);
+  const modalOpen = selectedId !== null;
 
   const [statusEdit, setStatusEdit] = useState('open');
   const [staffReply, setStaffReply] = useState('');
@@ -119,7 +126,7 @@ export function AdminSupportTicketsPage() {
   const detailQuery = useQuery({
     queryKey: queryKeys.adminSupportTicket(selectedId),
     queryFn: () => getAdminSupportTicket(selectedId as number),
-    enabled: Boolean(selectedId),
+    enabled: modalOpen,
   });
 
   const ticket = detailQuery.data?.data ?? null;
@@ -135,29 +142,6 @@ export function AdminSupportTicketsPage() {
   }, [navigate, searchParams, ticketIdParam]);
 
   useEffect(() => {
-    if (!ticketIdParam) {
-      setSelectedId(null);
-      return;
-    }
-    const id = Number.parseInt(ticketIdParam, 10);
-    if (!Number.isFinite(id) || id < 1) {
-      setSelectedId(null);
-      return;
-    }
-    setSelectedId((current) => (current === id ? current : id));
-  }, [ticketIdParam]);
-
-  useEffect(() => {
-    if (selectedId === null) {
-      return;
-    }
-    const expected = `${ADMIN_SUPPORT_BASE}/${selectedId}`;
-    if (location.pathname !== expected) {
-      navigate({ pathname: expected, search: '' }, { replace: true });
-    }
-  }, [location.pathname, navigate, selectedId]);
-
-  useEffect(() => {
     setStaffReply('');
     setInternalNote('');
   }, [selectedId]);
@@ -167,6 +151,10 @@ export function AdminSupportTicketsPage() {
       setStatusEdit(ticket.status);
     }
   }, [ticket?.id, ticket?.status]);
+
+  const closeTicketModal = useCallback(() => {
+    navigate(ADMIN_SUPPORT_BASE, { replace: true });
+  }, [navigate]);
 
   const setPerPageSafe = useCallback((next: number) => {
     setPerPage(normalizeClientPageSize(next));
@@ -251,179 +239,163 @@ export function AdminSupportTicketsPage() {
         }}
       />
 
-      <div className="grid gap-6 lg:grid-cols-5">
-        <Card className="p-0 lg:col-span-2">
-          <div className="border-b border-[#EAECF0] px-4 py-3 dark:border-slate-800">
-            <h3 className="text-sm font-semibold text-[#344054] dark:text-slate-200">Queue</h3>
+      <Card className="p-0">
+        <div className="border-b border-[#EAECF0] px-4 py-3 dark:border-slate-800">
+          <h3 className="text-sm font-semibold text-[#344054] dark:text-slate-200">Queue</h3>
+        </div>
+        {rows.length === 0 ? (
+          <div className="p-6">
+            <EmptyState title="No tickets" description="Tickets opened from member, association, and institution portals appear here." />
           </div>
-          {rows.length === 0 ? (
-            <div className="p-6">
-              <EmptyState title="No tickets" description="Tickets opened from member, association, and institution portals appear here." />
-            </div>
-          ) : (
-            <ul className="max-h-[70vh] divide-y divide-[#EAECF0] overflow-y-auto dark:divide-slate-800">
-              {rows.map((t) => (
-                <li key={t.id}>
-                  <Link
-                    to={`${ADMIN_SUPPORT_BASE}/${t.id}`}
-                    className={cn(
-                      'flex w-full flex-col gap-1 px-4 py-3 text-left text-sm transition hover:bg-[#F9FAFB] dark:hover:bg-slate-900',
-                      selectedId === t.id && 'bg-[#F4EBFF] dark:bg-violet-950/30',
-                    )}
-                  >
-                    <span className="line-clamp-2 font-medium text-[#101828] dark:text-slate-100">{t.subject}</span>
-                    <span className="text-xs text-[#667085] dark:text-slate-400">
-                      {t.user ? displayName(t.user) : 'Unknown'} · {formatDateTime(t.updated_at)}
-                    </span>
-                    <div className="flex flex-wrap items-center gap-2">
-                      <PortalQueueBadge context={t.portal_context} />
-                      <StatusBadge value={t.status} label={statusLabel(t.status)} className="w-fit" />
-                    </div>
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          )}
-          {meta ? (
-            <div className="border-t border-[#EAECF0] p-4 dark:border-slate-800">
-              <PaginationBar meta={meta} onPageChange={setPage} perPage={perPage} onPerPageChange={setPerPageSafe} subject="tickets" />
-            </div>
-          ) : null}
-        </Card>
-
-        <Card className="min-h-[360px] space-y-6 p-6 lg:col-span-3">
-          {!selectedId ? (
-            <EmptyState title="Select a ticket" description="Pick a row from the queue to review details and respond." />
-          ) : detailQuery.isLoading ? (
-            <div className="space-y-5">
-              <div className="h-7 max-w-lg animate-pulse rounded-md bg-slate-200 dark:bg-slate-700" />
-              <p className="text-sm text-[#667085] dark:text-slate-400">Ticket {formatSupportTicketRef(selectedId)}</p>
-              <div className="h-4 w-full max-w-md animate-pulse rounded-md bg-slate-100 dark:bg-slate-800" />
-              <div className="h-32 animate-pulse rounded-lg bg-slate-100 dark:bg-slate-800" />
-              <div className="flex gap-3">
-                <div className="h-10 w-48 animate-pulse rounded-md bg-slate-200 dark:bg-slate-700" />
-                <div className="h-10 w-28 animate-pulse rounded-md bg-slate-200 dark:bg-slate-700" />
-              </div>
-            </div>
-          ) : detailQuery.isError || !ticket ? (
-            <p className="text-sm text-[#B42318]">Unable to load this ticket.</p>
-          ) : (
-            <>
-              <div className="space-y-2">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <h2 className="text-xl font-semibold text-[#101828] dark:text-slate-100">{ticket.subject}</h2>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    className="shrink-0 text-[#667085]"
-                    onClick={() => {
-                      setSelectedId(null);
-                      navigate(ADMIN_SUPPORT_BASE, { replace: true });
-                    }}
-                  >
-                    Back to queue
-                  </Button>
-                </div>
-                <p className="text-sm text-[#667085] dark:text-slate-400">
-                  Ticket {formatSupportTicketRef(ticket.id)} · From {ticket.user ? displayName(ticket.user) : 'Unknown'} · Portal: {ticket.portal_context} ·{' '}
-                  {formatDateTime(ticket.created_at)}
-                </p>
-              </div>
-
-              <div className="rounded-lg border border-[#EAECF0] bg-[#F9FAFB] p-4 text-sm text-[#344054] dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200">
-                <p className="whitespace-pre-wrap">{ticket.body}</p>
-              </div>
-
-              <div className="flex flex-wrap items-end gap-3">
-                <label className="block min-w-[200px] space-y-2">
-                  <FieldLabel>Ticket status</FieldLabel>
-                  <select
-                    className="h-10 w-full rounded-md border border-[#D0D5DD] bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-950"
-                    value={statusEdit}
-                    onChange={(e) => setStatusEdit(e.target.value)}
-                  >
-                    {STATUS_FILTER.filter((o) => o.value).map((o) => (
-                      <option key={o.value} value={o.value}>
-                        {o.label}
-                      </option>
-                    ))}
-                  </select>
-                  <FieldError message={getAdminFieldError(statusMutation.error, ['status'])} />
-                </label>
-                <Button
-                  type="button"
-                  variant="secondary"
-                  disabled={statusMutation.isPending || statusEdit === ticket.status}
-                  onClick={() => void statusMutation.mutateAsync(undefined)}
+        ) : (
+          <ul className="divide-y divide-[#EAECF0] dark:divide-slate-800">
+            {rows.map((t) => (
+              <li key={t.id}>
+                <Link
+                  to={`${ADMIN_SUPPORT_BASE}/${t.id}`}
+                  className={cn(
+                    'flex w-full flex-col gap-1 px-4 py-3 text-left text-sm transition hover:bg-[#F9FAFB] dark:hover:bg-slate-900',
+                    selectedId === t.id && 'bg-[#F4EBFF] dark:bg-violet-950/30',
+                  )}
                 >
-                  {statusMutation.isPending ? 'Saving…' : 'Update status'}
+                  <span className="line-clamp-2 font-medium text-[#101828] dark:text-slate-100">{t.subject}</span>
+                  <span className="text-xs text-[#667085] dark:text-slate-400">
+                    {t.user ? displayName(t.user) : 'Unknown'} · {formatDateTime(t.updated_at)}
+                  </span>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <PortalQueueBadge context={t.portal_context} />
+                    <StatusBadge value={t.status} label={statusLabel(t.status)} className="w-fit" />
+                  </div>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        )}
+        {meta ? (
+          <div className="border-t border-[#EAECF0] p-4 dark:border-slate-800">
+            <PaginationBar meta={meta} onPageChange={setPage} perPage={perPage} onPerPageChange={setPerPageSafe} subject="tickets" />
+          </div>
+        ) : null}
+      </Card>
+
+      <Modal
+        open={modalOpen}
+        onClose={closeTicketModal}
+        title={ticket?.subject ?? (selectedId ? `Ticket ${formatSupportTicketRef(selectedId)}` : 'Support ticket')}
+        subtitle={
+          ticket
+            ? `${formatSupportTicketRef(ticket.id)} · ${ticket.user ? displayName(ticket.user) : 'Unknown'} · ${ticket.portal_context} · ${formatDateTime(ticket.created_at)}`
+            : selectedId
+              ? formatSupportTicketRef(selectedId)
+              : undefined
+        }
+        size="lg"
+      >
+        {detailQuery.isLoading ? (
+          <div className="space-y-5">
+            <div className="h-4 w-full max-w-md animate-pulse rounded-md bg-slate-100 dark:bg-slate-800" />
+            <div className="h-32 animate-pulse rounded-lg bg-slate-100 dark:bg-slate-800" />
+            <div className="flex gap-3">
+              <div className="h-10 w-48 animate-pulse rounded-md bg-slate-200 dark:bg-slate-700" />
+              <div className="h-10 w-28 animate-pulse rounded-md bg-slate-200 dark:bg-slate-700" />
+            </div>
+          </div>
+        ) : detailQuery.isError || !ticket ? (
+          <p className="text-sm text-[#B42318]">Unable to load this ticket.</p>
+        ) : (
+          <div className="space-y-6">
+            <div className="rounded-lg border border-[#EAECF0] bg-[#F9FAFB] p-4 text-sm text-[#344054] dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200">
+              <p className="whitespace-pre-wrap">{ticket.body}</p>
+            </div>
+
+            <div className="flex flex-wrap items-end gap-3">
+              <label className="block min-w-[200px] space-y-2">
+                <FieldLabel>Ticket status</FieldLabel>
+                <select
+                  className="h-10 w-full rounded-md border border-[#D0D5DD] bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-950"
+                  value={statusEdit}
+                  onChange={(e) => setStatusEdit(e.target.value)}
+                >
+                  {STATUS_FILTER.filter((o) => o.value).map((o) => (
+                    <option key={o.value} value={o.value}>
+                      {o.label}
+                    </option>
+                  ))}
+                </select>
+                <FieldError message={getAdminFieldError(statusMutation.error, ['status'])} />
+              </label>
+              <Button
+                type="button"
+                variant="secondary"
+                disabled={statusMutation.isPending || statusEdit === ticket.status}
+                onClick={() => void statusMutation.mutateAsync(undefined)}
+              >
+                {statusMutation.isPending ? 'Saving…' : 'Update status'}
+              </Button>
+            </div>
+
+            <div className="space-y-3">
+              <h3 className="text-sm font-semibold text-[#344054] dark:text-slate-200">Thread</h3>
+              {(ticket.replies ?? []).length === 0 ? (
+                <p className="text-sm text-[#667085] dark:text-slate-400">No replies yet.</p>
+              ) : (
+                <ul className="max-h-[40vh] space-y-3 overflow-y-auto pr-1">
+                  {(ticket.replies ?? []).map((r) => (
+                    <li
+                      key={r.id}
+                      className={cn(
+                        'rounded-lg border p-3 text-sm',
+                        r.is_staff
+                          ? 'border-[#D1FAE5] bg-[#ECFDF5] dark:border-emerald-900 dark:bg-emerald-950/30'
+                          : 'border-[#EAECF0] bg-white dark:border-slate-800 dark:bg-slate-950',
+                      )}
+                    >
+                      <div className="mb-1 flex flex-wrap items-center justify-between gap-2 text-xs text-[#667085] dark:text-slate-400">
+                        <span className="font-medium text-[#344054] dark:text-slate-200">
+                          {r.is_staff ? `Staff (${displayName(r.user)})` : displayName(r.user)}
+                        </span>
+                        <span>{formatDateTime(r.created_at)}</span>
+                      </div>
+                      <p className="whitespace-pre-wrap text-[#101828] dark:text-slate-100">{r.body}</p>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+
+            <FormTextareaField label="Staff reply (visible to user)" value={staffReply} onChange={(e) => setStaffReply(e.target.value)} rows={4} />
+            <div className="flex justify-end">
+              <Button type="button" disabled={staffReplyMutation.isPending || !staffReply.trim()} onClick={() => void staffReplyMutation.mutateAsync(undefined)}>
+                {staffReplyMutation.isPending ? 'Sending…' : 'Send staff reply'}
+              </Button>
+            </div>
+
+            <div className="border-t border-dashed border-[#FEDF89] pt-4 dark:border-amber-900">
+              <h3 className="mb-2 text-sm font-semibold text-[#B45309] dark:text-amber-200">Internal notes (staff only)</h3>
+              {(ticket.internal_notes ?? []).length === 0 ? (
+                <p className="mb-3 text-sm text-[#667085] dark:text-slate-400">No internal notes.</p>
+              ) : (
+                <ul className="mb-3 max-h-[28vh] space-y-2 overflow-y-auto pr-1">
+                  {(ticket.internal_notes ?? []).map((n) => (
+                    <li key={n.id} className="rounded-md border border-[#FEDF89] bg-[#FFFAEB] p-2 text-sm dark:border-amber-900 dark:bg-amber-950/40">
+                      <div className="text-xs text-[#92400E] dark:text-amber-200/90">
+                        {displayName(n.user)} · {formatDateTime(n.created_at)}
+                      </div>
+                      <p className="whitespace-pre-wrap text-[#78350F] dark:text-amber-100">{n.body}</p>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              <FormTextareaField label="Add internal note" value={internalNote} onChange={(e) => setInternalNote(e.target.value)} rows={3} />
+              <div className="mt-2 flex justify-end">
+                <Button type="button" variant="outline" disabled={noteMutation.isPending || !internalNote.trim()} onClick={() => void noteMutation.mutateAsync(undefined)}>
+                  {noteMutation.isPending ? 'Saving…' : 'Save internal note'}
                 </Button>
               </div>
-
-              <div className="space-y-3">
-                <h3 className="text-sm font-semibold text-[#344054] dark:text-slate-200">Thread</h3>
-                {(ticket.replies ?? []).length === 0 ? (
-                  <p className="text-sm text-[#667085] dark:text-slate-400">No replies yet.</p>
-                ) : (
-                  <ul className="space-y-3">
-                    {(ticket.replies ?? []).map((r) => (
-                      <li
-                        key={r.id}
-                        className={cn(
-                          'rounded-lg border p-3 text-sm',
-                          r.is_staff
-                            ? 'border-[#D1FAE5] bg-[#ECFDF5] dark:border-emerald-900 dark:bg-emerald-950/30'
-                            : 'border-[#EAECF0] bg-white dark:border-slate-800 dark:bg-slate-950',
-                        )}
-                      >
-                        <div className="mb-1 flex flex-wrap items-center justify-between gap-2 text-xs text-[#667085] dark:text-slate-400">
-                          <span className="font-medium text-[#344054] dark:text-slate-200">
-                            {r.is_staff ? `Staff (${displayName(r.user)})` : displayName(r.user)}
-                          </span>
-                          <span>{formatDateTime(r.created_at)}</span>
-                        </div>
-                        <p className="whitespace-pre-wrap text-[#101828] dark:text-slate-100">{r.body}</p>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </div>
-
-              <FormTextareaField label="Staff reply (visible to user)" value={staffReply} onChange={(e) => setStaffReply(e.target.value)} rows={4} />
-              <div className="flex justify-end">
-                <Button type="button" disabled={staffReplyMutation.isPending || !staffReply.trim()} onClick={() => void staffReplyMutation.mutateAsync(undefined)}>
-                  {staffReplyMutation.isPending ? 'Sending…' : 'Send staff reply'}
-                </Button>
-              </div>
-
-              <div className="border-t border-dashed border-[#FEDF89] pt-4 dark:border-amber-900">
-                <h3 className="mb-2 text-sm font-semibold text-[#B45309] dark:text-amber-200">Internal notes (staff only)</h3>
-                {(ticket.internal_notes ?? []).length === 0 ? (
-                  <p className="mb-3 text-sm text-[#667085] dark:text-slate-400">No internal notes.</p>
-                ) : (
-                  <ul className="mb-3 space-y-2">
-                    {(ticket.internal_notes ?? []).map((n) => (
-                      <li key={n.id} className="rounded-md border border-[#FEDF89] bg-[#FFFAEB] p-2 text-sm dark:border-amber-900 dark:bg-amber-950/40">
-                        <div className="text-xs text-[#92400E] dark:text-amber-200/90">
-                          {displayName(n.user)} · {formatDateTime(n.created_at)}
-                        </div>
-                        <p className="whitespace-pre-wrap text-[#78350F] dark:text-amber-100">{n.body}</p>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-                <FormTextareaField label="Add internal note" value={internalNote} onChange={(e) => setInternalNote(e.target.value)} rows={3} />
-                <div className="mt-2 flex justify-end">
-                  <Button type="button" variant="outline" disabled={noteMutation.isPending || !internalNote.trim()} onClick={() => void noteMutation.mutateAsync(undefined)}>
-                    {noteMutation.isPending ? 'Saving…' : 'Save internal note'}
-                  </Button>
-                </div>
-              </div>
-            </>
-          )}
-        </Card>
-      </div>
+            </div>
+          </div>
+        )}
+      </Modal>
     </div>
   );
 }

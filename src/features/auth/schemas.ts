@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { INSTITUTION_REGISTER_TYPES, type InstitutionRegisterType } from '@/features/auth/institutionTypes';
+import { MEMBER_APPLICANT_TYPES } from '@/features/membership/applicantAssociations';
 
 export const loginSchema = z.object({
   email: z.string().email('Enter a valid email address.'),
@@ -36,7 +37,7 @@ export const memberRegisterSchema = z.object({
   phone: z.string().min(1, 'Phone is required.'),
   password: z.string().min(8, 'Password must be at least 8 characters.'),
   password_confirmation: z.string().min(8, 'Confirm your password.'),
-  applicant_type: z.enum(['author', 'publisher']),
+  applicant_type: z.enum(MEMBER_APPLICANT_TYPES),
   association_id: z.coerce.number().int().positive('Select an association.'),
   accepted_terms: z.boolean().refine((value) => value === true, 'You must agree to the REPRONIG terms and conditions.'),
 }).refine((value) => value.password === value.password_confirmation, {

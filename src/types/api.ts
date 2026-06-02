@@ -43,4 +43,6 @@ export interface ListParams {
   date_to?: string;
   sort?: string;
   direction?: 'asc' | 'desc';
+  /** Public associations: filter by member applicant type (author, publisher, artist). */
+  applicant_type?: string;
 }

@@ -1,4 +1,4 @@
-import { useRef, type ComponentRef } from 'react';
+import { useEffect, useRef, type ComponentRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { useForm, type Resolver } from 'react-hook-form';
@@ -17,6 +17,8 @@ import { RecaptchaV2Checkbox } from '@/features/auth/RecaptchaV2Checkbox';
 import { Alert } from '@/components/ui/alert';
 import { queryKeys } from '@/lib/queryKeys';
 import { env } from '@/utils/env';
+import { APPLICANT_TYPE_OPTIONS } from '@/features/membership/applicantAssociations';
+import type { AssociationResource } from '@/types/domain';
 
 export function MemberRegisterPage() {
   const navigate = useNavigate();
@@ -36,10 +38,23 @@ export function MemberRegisterPage() {
     },
   });
 
+  const applicantType = form.watch('applicant_type');
+  const associationId = form.watch('association_id');
+
   const associationsQuery = useQuery({
-    queryKey: queryKeys.publicAssociationsRegister,
-    queryFn: () => getPublicAssociations({ per_page: 100 }),
+    queryKey: [...queryKeys.publicAssociationsRegister, applicantType],
+    queryFn: () => getPublicAssociations({ per_page: 100, applicant_type: applicantType }),
   });
+
+  const associationOptions: AssociationResource[] = associationsQuery.data?.data ?? [];
+
+  useEffect(() => {
+    if (!associationOptions.length) return;
+    const stillValid = associationOptions.some((a) => a.id === associationId);
+    if (!stillValid) {
+      form.setValue('association_id', 0, { shouldValidate: true });
+    }
+  }, [applicantType, associationOptions, associationId, form]);
 
   const platformSettingsQuery = useQuery({
     queryKey: queryKeys.publicPlatformSettings,
@@ -68,6 +83,8 @@ export function MemberRegisterPage() {
   });
 
   const isSubmitting = form.formState.isSubmitting || mutation.isPending;
+
+  const applicantTypeField = form.register('applicant_type');
 
   const handleRegistrationSubmit = async (values: MemberRegisterFormValues) => {
     let payload: RegisterMemberPayload = { ...values };
@@ -99,10 +116,40 @@ export function MemberRegisterPage() {
           <FormField label="Email" requiredIndicator type="email" {...form.register('email')} error={form.formState.errors.email?.message} />
           <FormField label="Phone" requiredIndicator {...form.register('phone')} error={form.formState.errors.phone?.message} />
           <div className="auth-register-form-span-2">
-            <FormSelectField label="Applicant type" requiredIndicator {...form.register('applicant_type')} error={form.formState.errors.applicant_type?.message}><option value="author">Author</option><option value="publisher">Publisher</option></FormSelectField>
+            <FormSelectField
+              label="Applicant type"
+              requiredIndicator
+              name={applicantTypeField.name}
+              ref={applicantTypeField.ref}
+              onBlur={applicantTypeField.onBlur}
+              onChange={(event) => {
+                applicantTypeField.onChange(event);
+                form.setValue('association_id', 0, { shouldValidate: true });
+              }}
+              error={form.formState.errors.applicant_type?.message}
+            >
+              {APPLICANT_TYPE_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </FormSelectField>
           </div>
           <div className="auth-register-form-span-2">
-            <FormSelectField label="Association" requiredIndicator {...form.register('association_id')} error={form.formState.errors.association_id?.message}><option value="">Select an association</option>{associationsQuery.data?.data.map((association) => (<option key={association.id} value={association.id}>{association.name}</option>))}</FormSelectField>
+            <FormSelectField
+              label="Association"
+              requiredIndicator
+              disabled={associationsQuery.isLoading}
+              {...form.register('association_id')}
+              error={form.formState.errors.association_id?.message}
+            >
+              <option value="">Select an association</option>
+              {associationOptions.map((association) => (
+                <option key={association.id} value={association.id}>
+                  {association.name}
+                </option>
+              ))}
+            </FormSelectField>
           </div>
           <FormField label="Password" requiredIndicator type="password" {...form.register('password')} error={form.formState.errors.password?.message} />
           <FormField label="Confirm password" requiredIndicator type="password" {...form.register('password_confirmation')} error={form.formState.errors.password_confirmation?.message} />

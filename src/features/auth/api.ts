@@ -46,7 +46,7 @@ export interface RegisterMemberPayload {
   phone: string;
   password: string;
   password_confirmation: string;
-  applicant_type: 'author' | 'publisher';
+  applicant_type: 'author' | 'publisher' | 'artist';
   association_id: number;
   accepted_terms: boolean;
   /** Required when API `RECAPTCHA_SECRET_KEY` is configured. */

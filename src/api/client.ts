@@ -6,6 +6,8 @@ export const apiClient = axios.create({
   baseURL: env.apiBaseUrl,
   headers: {
     Accept: 'application/json',
+    /** Tells the API to enforce reCAPTCHA on registration when configured. */
+    'X-Repronig-Client': 'web',
   },
 });
 

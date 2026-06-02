@@ -13,9 +13,9 @@ export interface MemberApplicationPayload {
   first_name: string;
   last_name: string;
   association_id: number;
-  applicant_type: 'author' | 'publisher';
+  applicant_type: 'author' | 'publisher' | 'artist';
   member_author_type?: 'individual' | 'corporate' | 'agent' | '';
-  member_author_category?: 'author' | 'journalist' | 'photographer' | 'illustrator' | 'carver' | 'painter' | 'sculptor' | 'other' | '';
+  member_author_category?: string;
   nationality?: string;
   country_of_residence: string;
   is_diaspora: boolean;
@@ -97,7 +97,8 @@ export async function getMemberApplication(memberApplicationId: number) {
 }
 
 export async function updateMemberApplication(memberApplicationId: number, payload: Partial<MemberApplicationPayload>) {
-  return patchSuccess<MemberApplicationResource>(`/member-applications/${memberApplicationId}`, payload);
+  const { applicant_type: _applicantType, association_id: _associationId, ...mutable } = payload;
+  return patchSuccess<MemberApplicationResource>(`/member-applications/${memberApplicationId}`, mutable);
 }
 
 export async function submitMemberApplication(memberApplicationId: number) {

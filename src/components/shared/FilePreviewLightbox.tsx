@@ -7,9 +7,23 @@ function isImage(url: string) {
   return /\.(png|jpe?g|gif|webp|svg)(\?|$)/i.test(url);
 }
 
-export function FilePreviewLightbox({ open, onClose, url, title, downloadUrl }: { open: boolean; onClose: () => void; url?: string | null; title: string; downloadUrl?: string | null }) {
+export function FilePreviewLightbox({
+  open,
+  onClose,
+  url,
+  title,
+  downloadUrl,
+  viewOnly = false,
+}: {
+  open: boolean;
+  onClose: () => void;
+  url?: string | null;
+  title: string;
+  downloadUrl?: string | null;
+  viewOnly?: boolean;
+}) {
   const resolvedUrl = resolveFileUrl(url);
-  const resolvedDownloadUrl = resolveFileUrl(downloadUrl);
+  const resolvedDownloadUrl = viewOnly ? null : resolveFileUrl(downloadUrl);
 
   return (
     <Modal open={open} onClose={onClose} title={title} subtitle="Preview loaded from the backend-provided file URL." size="lg">

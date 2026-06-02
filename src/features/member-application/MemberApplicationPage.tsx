@@ -4,7 +4,16 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { createMemberApplication, deleteMemberApplicationDocument, downloadMemberApplicationMandate, getMyMemberApplication, submitMemberApplication, updateMemberApplication, uploadMemberApplicationDocument } from '@/features/member/api';
-import { getPublicAssociations, getActiveTerms } from '@/features/public/api';
+import { getActiveTerms } from '@/features/public/api';
+import {
+  APPLICATION_DOCUMENT_WHY,
+  ARTIST_CATEGORY_OPTIONS,
+  AUTHOR_CATEGORY_OPTIONS,
+  MEMBER_TYPE_OPTIONS,
+  applicantTypeLabel,
+  isAuthorLikeApplicantType,
+  normalizeApplicantTypeForForm,
+} from '@/features/membership/applicantAssociations';
 import { onMutationApiError } from '@/lib/mutationFeedback';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -28,31 +37,9 @@ import { useAuthStore } from '@/store/auth.store';
 import { queryKeys } from '@/lib/queryKeys';
 import { parseFilenameFromContentDisposition, triggerBlobDownload } from '@/utils/download';
 
-const applicantTypeOptions = [
-  { label: 'Author', value: 'author' },
-  { label: 'Publisher', value: 'publisher' },
-];
-
-const authorTypeOptions = [
-  { label: 'Individual', value: 'individual' },
-  { label: 'Corporate', value: 'corporate' },
-  { label: 'Agent', value: 'agent' },
-];
-
-const authorCategoryOptions = [
-  { label: 'Author', value: 'author' },
-  { label: 'Journalist', value: 'journalist' },
-  { label: 'Photographer', value: 'photographer' },
-  { label: 'Illustrator', value: 'illustrator' },
-  { label: 'Carver', value: 'carver' },
-  { label: 'Painter', value: 'painter' },
-  { label: 'Sculptor', value: 'sculptor' },
-  { label: 'Other', value: 'other' },
-];
-
 const documentTypeOptions = [
-  { label: 'Proof of ID', value: 'proof_of_id', subText: "This can be NIN, International Passport, Driver's Licence, or Voter’s Card" },
-  { label: 'Proof of Address', value: 'proof_of_address', subText: 'This can be Nepa Bill, Bank statement, Phone Bill' },
+  { label: 'Proof of ID', value: 'proof_of_id' as const, subText: "This can be NIN, International Passport, Driver's Licence, or Voter’s Card" },
+  { label: 'Proof of Address', value: 'proof_of_address' as const, subText: 'This can be Nepa Bill, Bank statement, Phone Bill' },
 ] as const;
 
 const requiredDocumentTypes = documentTypeOptions.map((option) => option.value);
@@ -65,6 +52,7 @@ export function MemberApplicationPage() {
   const [documentFiles, setDocumentFiles] = useState<Record<string, File | undefined>>({});
   const [uploadingType, setUploadingType] = useState<string | null>(null);
   const [submissionSuccessOpen, setSubmissionSuccessOpen] = useState(false);
+  const [documentWhyType, setDocumentWhyType] = useState<'proof_of_id' | 'proof_of_address' | null>(null);
 
   const applicationQuery = useQuery({
     queryKey: memberApplicationQueryKeys.me,
@@ -78,14 +66,6 @@ export function MemberApplicationPage() {
   });
 
   const termsHtml = useMemo(() => formatTermsContent(termsQuery.data?.content), [termsQuery.data?.content]);
-
-  const associationsQuery = useQuery({
-    queryKey: queryKeys.publicAssociationsAll,
-    queryFn: async () => {
-      const response = await getPublicAssociations({ per_page: 100, page: 1 });
-      return response.data;
-    },
-  });
 
   const application = applicationQuery.data?.data ?? null;
   const canEdit = !application || ['draft', 'changes_requested'].includes(application.application_status);
@@ -130,13 +110,18 @@ export function MemberApplicationPage() {
   });
 
   const applicantType = form.watch('applicant_type');
-  const selectedAssociationId = form.watch('association_id');
-  const signupAssociationId = Number(currentUser?.member_application?.association?.id ?? 0);
-  const selectedAssociation = useMemo(() => {
-    const associationId = Number(selectedAssociationId || application?.association?.id || signupAssociationId || 0);
-    return application?.association ?? associationsQuery.data?.find((association) => association.id === associationId) ?? null;
-  }, [application?.association, application?.association?.id, associationsQuery.data, selectedAssociationId, signupAssociationId]);
-  const selectedAssociationName = selectedAssociation?.name ?? 'your association';
+  const lockedAssociationId = Number(
+    application?.association?.id ?? currentUser?.member_application?.association?.id ?? 0,
+  );
+  const lockedAssociationName =
+    application?.association?.name ?? currentUser?.member_application?.association?.name ?? 'your association';
+  const lockedApplicantType = normalizeApplicantTypeForForm(
+    application?.applicant_type ?? currentUser?.member_application?.applicant_type,
+  );
+  const registrationApplicantLabel = applicantTypeLabel(lockedApplicantType);
+  const isAuthorLike = isAuthorLikeApplicantType(applicantType);
+  const categoryOptions = applicantType === 'artist' ? ARTIST_CATEGORY_OPTIONS : AUTHOR_CATEGORY_OPTIONS;
+  const memberTypeLabel = applicantType === 'artist' ? 'Artist type' : 'Author type';
 
   useEffect(() => {
     if (!application) return;
@@ -150,8 +135,8 @@ export function MemberApplicationPage() {
     form.reset({
       first_name,
       last_name,
-      association_id: application.association?.id ?? 0,
-      applicant_type: application.applicant_type as MemberApplicationFormValues['applicant_type'],
+      association_id: application.association?.id ?? lockedAssociationId,
+      applicant_type: normalizeApplicantTypeForForm(application.applicant_type),
       member_author_type: (application.member_author_type ?? '') as MemberApplicationFormValues['member_author_type'],
       member_author_category: (application.member_author_category ?? '') as MemberApplicationFormValues['member_author_category'],
       nationality: application.nationality ?? 'Nigeria',
@@ -196,24 +181,39 @@ export function MemberApplicationPage() {
     );
     if (first_name) form.setValue('first_name', first_name);
     if (last_name) form.setValue('last_name', last_name);
-    if (signupAssociationId > 0 && !form.getValues('association_id')) {
-      form.setValue('association_id', signupAssociationId);
+    if (lockedAssociationId > 0) {
+      form.setValue('association_id', lockedAssociationId);
     }
+    const regType = normalizeApplicantTypeForForm(currentUser?.member_application?.applicant_type);
+    form.setValue('applicant_type', regType);
   }, [
     application,
     currentUser?.user?.id,
     currentUser?.user?.first_name,
     currentUser?.user?.last_name,
     currentUser?.user?.name,
+    currentUser?.member_application?.applicant_type,
     currentUser?.member_application?.association?.id,
-    signupAssociationId,
+    lockedAssociationId,
     form,
   ]);
 
+  useEffect(() => {
+    if (lockedAssociationId > 0) {
+      form.setValue('association_id', lockedAssociationId, { shouldValidate: true });
+    }
+    form.setValue('applicant_type', lockedApplicantType, { shouldValidate: true });
+  }, [form, lockedApplicantType, lockedAssociationId]);
+
   const saveMutation = useMutation({
     mutationFn: async (values: MemberApplicationFormValues) => {
-      if (application) return updateMemberApplication(application.id, values);
-      return createMemberApplication(values);
+      const payload: MemberApplicationFormValues = {
+        ...values,
+        association_id: lockedAssociationId,
+        applicant_type: lockedApplicantType,
+      };
+      if (application) return updateMemberApplication(application.id, payload);
+      return createMemberApplication(payload);
     },
     onSuccess: (response) => {
       toast.success(response.message);
@@ -342,31 +342,26 @@ export function MemberApplicationPage() {
           </div>
           </ModalFormSection>
 
-          <ModalFormSection badge="2" title="Association & applicant" description="Choose your association and how you are applying.">
+          <ModalFormSection badge="2" title="Association & applicant" description="Association and applicant type were set when you registered and cannot be changed here.">
           <div className="grid gap-5 md:grid-cols-2">
             <FormField label="First name" requiredIndicator disabled={!canEdit} error={form.formState.errors.first_name?.message} {...form.register('first_name')} />
             <FormField label="Last name" requiredIndicator disabled={!canEdit} error={form.formState.errors.last_name?.message} {...form.register('last_name')} />
           <label className="block space-y-2">
             <FieldLabel required>Association</FieldLabel>
-            <select className="h-12 w-full rounded-md border border-[#222222] bg-white px-4 text-base text-[#1E2024] outline-none transition focus:border-[#AF1512] focus:ring-2 focus:ring-[rgba(175,21,18,0.12)] dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100" disabled={!canEdit || associationsQuery.isLoading} {...form.register('association_id', { valueAsNumber: true })}>
-              <option value={0}>Select association</option>
-              {(associationsQuery.data ?? []).map((association) => <option key={association.id} value={association.id}>{association.name}</option>)}
-            </select>
-            <FieldError message={form.formState.errors.association_id?.message} />
+            <Input value={lockedAssociationName} disabled readOnly className="bg-slate-50 dark:bg-slate-900/80" />
+            <p className="text-xs text-slate-500 dark:text-slate-400">Locked to your registration selection.</p>
           </label>
 
           <label className="block space-y-2">
             <FieldLabel required>Applicant type</FieldLabel>
-            <select className="h-12 w-full rounded-md border border-[#222222] bg-white px-4 text-base text-[#1E2024] outline-none transition focus:border-[#AF1512] focus:ring-2 focus:ring-[rgba(175,21,18,0.12)] dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100" disabled={!canEdit} {...form.register('applicant_type')}>
-              {applicantTypeOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
-            </select>
-            <FieldError message={form.formState.errors.applicant_type?.message} />
+            <Input value={registrationApplicantLabel} disabled readOnly className="bg-slate-50 dark:bg-slate-900/80" />
+            <p className="text-xs text-slate-500 dark:text-slate-400">Set during member registration and cannot be changed.</p>
           </label>
 
-          {applicantType === 'author' ? (
+          {isAuthorLike ? (
             <>
-              <label className="block space-y-2"><FieldLabel required>Author Type</FieldLabel><select className="h-12 w-full rounded-md border border-[#222222] bg-white px-4 text-base dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100" disabled={!canEdit} {...form.register('member_author_type')}><option value="">Select author type</option>{authorTypeOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select><FieldError message={form.formState.errors.member_author_type?.message} /></label>
-              <label className="block space-y-2"><FieldLabel required>Category</FieldLabel><select className="h-12 w-full rounded-md border border-[#222222] bg-white px-4 text-base dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100" disabled={!canEdit} {...form.register('member_author_category')}><option value="">Select category</option>{authorCategoryOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select><FieldError message={form.formState.errors.member_author_category?.message} /></label>
+              <label className="block space-y-2"><FieldLabel required>{memberTypeLabel}</FieldLabel><select className="h-12 w-full rounded-md border border-[#222222] bg-white px-4 text-base dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100" disabled={!canEdit} {...form.register('member_author_type')}><option value="">Select type</option>{MEMBER_TYPE_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select><FieldError message={form.formState.errors.member_author_type?.message} /></label>
+              <label className="block space-y-2"><FieldLabel required>Category</FieldLabel><select className="h-12 w-full rounded-md border border-[#222222] bg-white px-4 text-base dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100" disabled={!canEdit} {...form.register('member_author_category')}><option value="">Select category</option>{categoryOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select><FieldError message={form.formState.errors.member_author_category?.message} /></label>
               <label className="block space-y-2"><FieldLabel>Nationality</FieldLabel><Input disabled={!canEdit} {...form.register('nationality')} /><FieldError message={form.formState.errors.nationality?.message} /></label>
               <label className="block space-y-2"><FieldLabel required>Name of Next of Kin</FieldLabel><Input disabled={!canEdit} {...form.register('next_of_kin_name')} /><FieldError message={form.formState.errors.next_of_kin_name?.message} /></label>
               <label className="block space-y-2"><FieldLabel required>Next of Kin’s Contact Number</FieldLabel><Input disabled={!canEdit} {...form.register('next_of_kin_phone')} /><FieldError message={form.formState.errors.next_of_kin_phone?.message} /></label>
@@ -416,7 +411,21 @@ export function MemberApplicationPage() {
                       const existingDocument = application?.documents?.find((document) => document.document_type === documentType.value);
                       return (
                         <div key={documentType.value} className="rounded-md border border-[#EAECF0] p-4 dark:border-slate-800">
-                          <div className="mb-3 flex items-start justify-between gap-3"><div><FieldLabel required>{documentType.label}</FieldLabel><p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{documentType.subText}</p><p className="mt-1 text-sm text-slate-500 dark:text-slate-400">PDF, JPG, JPEG, or PNG. Max 10MB.</p></div>{existingDocument ? <StatusBadge value="uploaded" label="Uploaded" /> : null}</div>
+                          <div className="mb-3 flex items-start justify-between gap-3">
+                            <div>
+                              <FieldLabel required>{documentType.label}</FieldLabel>
+                              <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{documentType.subText}</p>
+                              <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">PDF, JPG, JPEG, or PNG. Max 10MB.</p>
+                              <button
+                                type="button"
+                                className="mt-2 text-sm font-semibold text-[#AF1512] underline-offset-2 hover:underline"
+                                onClick={() => setDocumentWhyType(documentType.value)}
+                              >
+                                Why this document?
+                              </button>
+                            </div>
+                            {existingDocument ? <StatusBadge value="uploaded" label="Uploaded" /> : null}
+                          </div>
                           <FileUploadField
                             label="File"
                             file={documentFiles[documentType.value]}
@@ -457,12 +466,27 @@ export function MemberApplicationPage() {
       <Modal open={submissionSuccessOpen} onClose={() => setSubmissionSuccessOpen(false)} title="Application submitted" subtitle="Your membership application is now under affiliation validation." size="sm">
         <div className="space-y-4 text-sm leading-6 text-[#344054] dark:text-slate-200">
           <p>
-            Your application has been submitted. {selectedAssociationName} will now validate your affiliation with them, then REPRONIG Admin will complete the final review.
+            Your application has been submitted. {lockedAssociationName} will now validate your affiliation with them, then REPRONIG Admin will complete the final review.
           </p>
           <p>You will receive email and in-app updates when our admin requests changes, rejects, or approves your application.</p>
           <div className="flex justify-end">
             <Button type="button" onClick={() => setSubmissionSuccessOpen(false)}>Okay</Button>
           </div>
+        </div>
+      </Modal>
+
+      <Modal
+        open={documentWhyType !== null}
+        onClose={() => setDocumentWhyType(null)}
+        title={documentWhyType === 'proof_of_id' ? 'Proof of ID' : 'Proof of Address'}
+        subtitle="Why we ask for this document"
+        size="sm"
+      >
+        <p className="text-sm leading-6 text-[#344054] dark:text-slate-200">
+          {documentWhyType ? APPLICATION_DOCUMENT_WHY[documentWhyType] : ''}
+        </p>
+        <div className="mt-5 flex justify-end">
+          <Button type="button" onClick={() => setDocumentWhyType(null)}>Close</Button>
         </div>
       </Modal>
 

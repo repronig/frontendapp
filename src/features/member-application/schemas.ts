@@ -1,6 +1,14 @@
 import { z } from 'zod';
+import {
+  ARTIST_CATEGORY_OPTIONS,
+  AUTHOR_CATEGORY_OPTIONS,
+  MEMBER_APPLICANT_TYPES,
+} from '@/features/membership/applicantAssociations';
 
-const applicantTypes = ['author', 'publisher'] as const;
+const applicantTypes = MEMBER_APPLICANT_TYPES;
+
+const authorCategoryValues = AUTHOR_CATEGORY_OPTIONS.map((o) => o.value);
+const artistCategoryValues = ARTIST_CATEGORY_OPTIONS.map((o) => o.value);
 
 export const memberApplicationSchema = z.object({
   first_name: z.string().min(1, 'First name is required.').max(100),
@@ -8,7 +16,7 @@ export const memberApplicationSchema = z.object({
   association_id: z.number().min(1, 'Association is required.'),
   applicant_type: z.enum(applicantTypes),
   member_author_type: z.enum(['individual', 'corporate', 'agent']).optional().or(z.literal('')),
-  member_author_category: z.enum(['author', 'journalist', 'photographer', 'illustrator', 'carver', 'painter', 'sculptor', 'other']).optional().or(z.literal('')),
+  member_author_category: z.string().optional().or(z.literal('')),
   nationality: z.string().min(2, 'Nationality is required.').max(100),
   country_of_residence: z.string().min(2, 'Country of residence is required.'),
   is_diaspora: z.boolean(),
@@ -28,20 +36,51 @@ export const memberApplicationSchema = z.object({
   notes: z.string().max(1000).optional().or(z.literal('')),
   member_provided_id: z.string().max(100).optional().or(z.literal('')),
 }).superRefine((values, ctx) => {
-  if (values.applicant_type === 'author') {
-    if (!values.member_author_type) ctx.addIssue({ code: 'custom', path: ['member_author_type'], message: 'Author type is required.' });
-    if (!values.member_author_category) ctx.addIssue({ code: 'custom', path: ['member_author_category'], message: 'Author category is required.' });
-    if (!values.next_of_kin_name) ctx.addIssue({ code: 'custom', path: ['next_of_kin_name'], message: 'Next of kin name is required.' });
-    if (!values.next_of_kin_phone) ctx.addIssue({ code: 'custom', path: ['next_of_kin_phone'], message: 'Next of kin contact number is required.' });
+  if (values.applicant_type === 'author' || values.applicant_type === 'artist') {
+    const typeLabel = values.applicant_type === 'artist' ? 'Artist' : 'Author';
+    if (!values.member_author_type) {
+      ctx.addIssue({ code: 'custom', path: ['member_author_type'], message: `${typeLabel} type is required.` });
+    }
+    if (!values.member_author_category) {
+      ctx.addIssue({ code: 'custom', path: ['member_author_category'], message: 'Category is required.' });
+    }
+    if (values.member_author_category) {
+      const allowed = values.applicant_type === 'artist' ? artistCategoryValues : authorCategoryValues;
+      if (!(allowed as readonly string[]).includes(values.member_author_category)) {
+        ctx.addIssue({
+          code: 'custom',
+          path: ['member_author_category'],
+          message: values.applicant_type === 'artist' ? 'Select a valid artist category.' : 'Select a valid author category.',
+        });
+      }
+    }
+    if (!values.next_of_kin_name) {
+      ctx.addIssue({ code: 'custom', path: ['next_of_kin_name'], message: 'Next of kin name is required.' });
+    }
+    if (!values.next_of_kin_phone) {
+      ctx.addIssue({ code: 'custom', path: ['next_of_kin_phone'], message: 'Next of kin contact number is required.' });
+    }
   }
 
   if (values.applicant_type === 'publisher') {
-    if (!values.publisher_organisation_name) ctx.addIssue({ code: 'custom', path: ['publisher_organisation_name'], message: 'Organization name is required.' });
-    if (!values.publisher_tin) ctx.addIssue({ code: 'custom', path: ['publisher_tin'], message: 'Tax Identification Number is required.' });
-    if (!values.publisher_location_address) ctx.addIssue({ code: 'custom', path: ['publisher_location_address'], message: 'Location address is required.' });
-    if (!values.publisher_postal_address) ctx.addIssue({ code: 'custom', path: ['publisher_postal_address'], message: 'Postal address is required.' });
-    if (!values.publisher_email) ctx.addIssue({ code: 'custom', path: ['publisher_email'], message: 'Organization email is required.' });
-    if (!values.publisher_phone) ctx.addIssue({ code: 'custom', path: ['publisher_phone'], message: 'Organization phone number is required.' });
+    if (!values.publisher_organisation_name) {
+      ctx.addIssue({ code: 'custom', path: ['publisher_organisation_name'], message: 'Organization name is required.' });
+    }
+    if (!values.publisher_tin) {
+      ctx.addIssue({ code: 'custom', path: ['publisher_tin'], message: 'Tax Identification Number is required.' });
+    }
+    if (!values.publisher_location_address) {
+      ctx.addIssue({ code: 'custom', path: ['publisher_location_address'], message: 'Location address is required.' });
+    }
+    if (!values.publisher_postal_address) {
+      ctx.addIssue({ code: 'custom', path: ['publisher_postal_address'], message: 'Postal address is required.' });
+    }
+    if (!values.publisher_email) {
+      ctx.addIssue({ code: 'custom', path: ['publisher_email'], message: 'Organization email is required.' });
+    }
+    if (!values.publisher_phone) {
+      ctx.addIssue({ code: 'custom', path: ['publisher_phone'], message: 'Organization phone number is required.' });
+    }
   }
 });
 
