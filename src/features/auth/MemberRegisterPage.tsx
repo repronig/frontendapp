@@ -39,7 +39,7 @@ export function MemberRegisterPage() {
   });
 
   const applicantType = form.watch('applicant_type');
-  const associationId = form.watch('association_id');
+  const associationId = Number(form.watch('association_id')) || 0;
 
   const associationsQuery = useQuery({
     queryKey: [...queryKeys.publicAssociationsRegister, applicantType],
@@ -49,10 +49,21 @@ export function MemberRegisterPage() {
   const associationOptions: AssociationResource[] = associationsQuery.data?.data ?? [];
 
   useEffect(() => {
-    if (!associationOptions.length) return;
+    if (!associationOptions.length) {
+      if (associationId > 0) {
+        form.setValue('association_id', 0, { shouldValidate: false });
+        form.clearErrors('association_id');
+      }
+      return;
+    }
     const stillValid = associationOptions.some((a) => a.id === associationId);
-    if (!stillValid) {
-      form.setValue('association_id', 0, { shouldValidate: true });
+    if (associationId > 0 && !stillValid) {
+      form.setValue('association_id', 0, { shouldValidate: false });
+      form.clearErrors('association_id');
+      return;
+    }
+    if (associationId === 0 && associationOptions.length === 1) {
+      form.setValue('association_id', associationOptions[0].id, { shouldValidate: true });
     }
   }, [applicantType, associationOptions, associationId, form]);
 
@@ -124,7 +135,8 @@ export function MemberRegisterPage() {
               onBlur={applicantTypeField.onBlur}
               onChange={(event) => {
                 applicantTypeField.onChange(event);
-                form.setValue('association_id', 0, { shouldValidate: true });
+                form.setValue('association_id', 0, { shouldValidate: false });
+                form.clearErrors('association_id');
               }}
               error={form.formState.errors.applicant_type?.message}
             >
@@ -140,12 +152,18 @@ export function MemberRegisterPage() {
               label="Association"
               requiredIndicator
               disabled={associationsQuery.isLoading}
-              {...form.register('association_id')}
+              name="association_id"
+              value={associationId > 0 ? String(associationId) : ''}
+              onChange={(event) => {
+                const raw = event.target.value;
+                form.setValue('association_id', raw === '' ? 0 : Number(raw), { shouldValidate: true });
+              }}
+              onBlur={() => void form.trigger('association_id')}
               error={form.formState.errors.association_id?.message}
             >
               <option value="">Select an association</option>
               {associationOptions.map((association) => (
-                <option key={association.id} value={association.id}>
+                <option key={association.id} value={String(association.id)}>
                   {association.name}
                 </option>
               ))}
