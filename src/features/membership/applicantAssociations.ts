@@ -20,10 +20,6 @@ export const AUTHOR_CATEGORY_OPTIONS = [
   { label: 'Author', value: 'author' },
   { label: 'Journalist', value: 'journalist' },
   { label: 'Photographer', value: 'photographer' },
-  { label: 'Illustrator', value: 'illustrator' },
-  { label: 'Carver', value: 'carver' },
-  { label: 'Painter', value: 'painter' },
-  { label: 'Sculptor', value: 'sculptor' },
   { label: 'Other', value: 'other' },
 ] as const;
 
@@ -32,6 +28,14 @@ export const ARTIST_CATEGORY_OPTIONS = [
   { label: 'Carver', value: 'carver' },
   { label: 'Painter', value: 'painter' },
   { label: 'Sculptor', value: 'sculptor' },
+  { label: 'Other', value: 'other' },
+] as const;
+
+export const PUBLISHER_CATEGORY_OPTIONS = [
+  { label: 'Book Publisher', value: 'book_publisher' },
+  { label: 'Magazine Publisher', value: 'magazine_publisher' },
+  { label: 'Newspaper Publisher', value: 'newspaper_publisher' },
+  { label: 'Digital/Web Publisher', value: 'digital_web_publisher' },
   { label: 'Other', value: 'other' },
 ] as const;
 
@@ -54,4 +58,24 @@ export function normalizeApplicantTypeForForm(value: string | null | undefined):
 export function applicantTypeLabel(applicantType: string): string {
   const found = APPLICANT_TYPE_OPTIONS.find((o) => o.value === normalizeApplicantTypeForForm(applicantType));
   return found?.label ?? applicantType;
+}
+
+export function memberTypeLabel(applicantType: MemberApplicantType): string {
+  if (applicantType === 'artist') return 'Artist type';
+  if (applicantType === 'publisher') return 'Publisher type';
+  return 'Author type';
+}
+
+export function categoryOptionsFor(applicantType: MemberApplicantType) {
+  if (applicantType === 'artist') return ARTIST_CATEGORY_OPTIONS;
+  if (applicantType === 'publisher') return PUBLISHER_CATEGORY_OPTIONS;
+  return AUTHOR_CATEGORY_OPTIONS;
+}
+
+export function isIndividualMemberType(memberAuthorType: string | undefined): boolean {
+  return memberAuthorType === 'individual';
+}
+
+export function isOrgMemberType(memberAuthorType: string | undefined): boolean {
+  return memberAuthorType === 'corporate' || memberAuthorType === 'agent';
 }

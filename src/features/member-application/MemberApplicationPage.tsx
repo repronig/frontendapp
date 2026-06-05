@@ -7,11 +7,12 @@ import { createMemberApplication, deleteMemberApplicationDocument, downloadMembe
 import { getActiveTerms } from '@/features/public/api';
 import {
   APPLICATION_DOCUMENT_WHY,
-  ARTIST_CATEGORY_OPTIONS,
-  AUTHOR_CATEGORY_OPTIONS,
   MEMBER_TYPE_OPTIONS,
   applicantTypeLabel,
-  isAuthorLikeApplicantType,
+  categoryOptionsFor,
+  isIndividualMemberType,
+  isOrgMemberType,
+  memberTypeLabel,
   normalizeApplicantTypeForForm,
 } from '@/features/membership/applicantAssociations';
 import { onMutationApiError } from '@/lib/mutationFeedback';
@@ -43,6 +44,9 @@ const documentTypeOptions = [
 ] as const;
 
 const requiredDocumentTypes = documentTypeOptions.map((option) => option.value);
+
+const memberTypeSelectClass =
+  'h-12 w-full rounded-md border border-[#222222] bg-white px-4 text-base dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100';
 
 
 export function MemberApplicationPage() {
@@ -109,7 +113,7 @@ export function MemberApplicationPage() {
     },
   });
 
-  const applicantType = form.watch('applicant_type');
+  const memberAuthorType = form.watch('member_author_type');
   const lockedAssociationId = Number(
     application?.association?.id ?? currentUser?.member_application?.association?.id ?? 0,
   );
@@ -119,9 +123,30 @@ export function MemberApplicationPage() {
     application?.applicant_type ?? currentUser?.member_application?.applicant_type,
   );
   const registrationApplicantLabel = applicantTypeLabel(lockedApplicantType);
-  const isAuthorLike = isAuthorLikeApplicantType(applicantType);
-  const categoryOptions = applicantType === 'artist' ? ARTIST_CATEGORY_OPTIONS : AUTHOR_CATEGORY_OPTIONS;
-  const memberTypeLabel = applicantType === 'artist' ? 'Artist type' : 'Author type';
+  const categoryOptions = categoryOptionsFor(lockedApplicantType);
+  const applicantMemberTypeLabel = memberTypeLabel(lockedApplicantType);
+  const showIndividualFields = isIndividualMemberType(memberAuthorType);
+  const showOrgFields = isOrgMemberType(memberAuthorType);
+
+  function handleMemberAuthorTypeChange(next: string) {
+    form.setValue(
+      'member_author_type',
+      next as MemberApplicationFormValues['member_author_type'],
+      { shouldValidate: true },
+    );
+    if (next === 'individual') {
+      form.setValue('publisher_organisation_name', '');
+      form.setValue('publisher_tin', '');
+      form.setValue('publisher_location_address', '');
+      form.setValue('publisher_postal_address', '');
+      form.setValue('publisher_email', '');
+      form.setValue('publisher_phone', '');
+    } else if (next === 'corporate' || next === 'agent') {
+      form.setValue('nationality', '');
+      form.setValue('next_of_kin_name', '');
+      form.setValue('next_of_kin_phone', '');
+    }
+  }
 
   useEffect(() => {
     if (!application) return;
@@ -358,24 +383,86 @@ export function MemberApplicationPage() {
             <p className="text-xs text-slate-500 dark:text-slate-400">Set during member registration and cannot be changed.</p>
           </label>
 
-          {isAuthorLike ? (
+          <label className="block space-y-2">
+            <FieldLabel required>{applicantMemberTypeLabel}</FieldLabel>
+            <select
+              className={memberTypeSelectClass}
+              disabled={!canEdit}
+              value={memberAuthorType ?? ''}
+              onChange={(event) => handleMemberAuthorTypeChange(event.target.value)}
+            >
+              <option value="">Select type</option>
+              {MEMBER_TYPE_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>{option.label}</option>
+              ))}
+            </select>
+            <FieldError message={form.formState.errors.member_author_type?.message} />
+          </label>
+
+          <label className="block space-y-2">
+            <FieldLabel required>Category</FieldLabel>
+            <select className={memberTypeSelectClass} disabled={!canEdit} {...form.register('member_author_category')}>
+              <option value="">Select category</option>
+              {categoryOptions.map((option) => (
+                <option key={option.value} value={option.value}>{option.label}</option>
+              ))}
+            </select>
+            <FieldError message={form.formState.errors.member_author_category?.message} />
+          </label>
+
+          {showIndividualFields ? (
             <>
-              <label className="block space-y-2"><FieldLabel required>{memberTypeLabel}</FieldLabel><select className="h-12 w-full rounded-md border border-[#222222] bg-white px-4 text-base dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100" disabled={!canEdit} {...form.register('member_author_type')}><option value="">Select type</option>{MEMBER_TYPE_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select><FieldError message={form.formState.errors.member_author_type?.message} /></label>
-              <label className="block space-y-2"><FieldLabel required>Category</FieldLabel><select className="h-12 w-full rounded-md border border-[#222222] bg-white px-4 text-base dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100" disabled={!canEdit} {...form.register('member_author_category')}><option value="">Select category</option>{categoryOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select><FieldError message={form.formState.errors.member_author_category?.message} /></label>
-              <label className="block space-y-2"><FieldLabel>Nationality</FieldLabel><Input disabled={!canEdit} {...form.register('nationality')} /><FieldError message={form.formState.errors.nationality?.message} /></label>
-              <label className="block space-y-2"><FieldLabel required>Name of Next of Kin</FieldLabel><Input disabled={!canEdit} {...form.register('next_of_kin_name')} /><FieldError message={form.formState.errors.next_of_kin_name?.message} /></label>
-              <label className="block space-y-2"><FieldLabel required>Next of Kin’s Contact Number</FieldLabel><Input disabled={!canEdit} {...form.register('next_of_kin_phone')} /><FieldError message={form.formState.errors.next_of_kin_phone?.message} /></label>
+              <label className="block space-y-2">
+                <FieldLabel required>Nationality</FieldLabel>
+                <Input disabled={!canEdit} {...form.register('nationality')} />
+                <FieldError message={form.formState.errors.nationality?.message} />
+              </label>
+              <label className="block space-y-2">
+                <FieldLabel required>Name of Next of Kin</FieldLabel>
+                <Input disabled={!canEdit} {...form.register('next_of_kin_name')} />
+                <FieldError message={form.formState.errors.next_of_kin_name?.message} />
+              </label>
+              <label className="block space-y-2">
+                <FieldLabel required>Next of Kin&apos;s Contact Number</FieldLabel>
+                <Input disabled={!canEdit} {...form.register('next_of_kin_phone')} />
+                <FieldError message={form.formState.errors.next_of_kin_phone?.message} />
+              </label>
             </>
           ) : null}
 
-          {applicantType === 'publisher' ? (
+          {showOrgFields ? (
             <>
-              <label className="block space-y-2"><FieldLabel required>Name of Organization</FieldLabel><Input disabled={!canEdit} {...form.register('publisher_organisation_name')} /><FieldError message={form.formState.errors.publisher_organisation_name?.message} /></label>
-              <label className="block space-y-2"><FieldLabel required>Tax Identification Number</FieldLabel><Input disabled={!canEdit} {...form.register('publisher_tin')} /><FieldError message={form.formState.errors.publisher_tin?.message} /></label>
-              <label className="block space-y-2 md:col-span-2"><FieldLabel required>Location Address</FieldLabel><Input disabled={!canEdit} {...form.register('publisher_location_address')} /><FieldError message={form.formState.errors.publisher_location_address?.message} /></label>
-              <label className="block space-y-2 md:col-span-2"><FieldLabel required>Postal Address</FieldLabel><Input disabled={!canEdit} {...form.register('publisher_postal_address')} /><FieldError message={form.formState.errors.publisher_postal_address?.message} /></label>
-              <label className="block space-y-2"><FieldLabel required>Organization Email</FieldLabel><Input type="email" disabled={!canEdit} {...form.register('publisher_email')} /><FieldError message={form.formState.errors.publisher_email?.message} /></label>
-              <label className="block space-y-2"><FieldLabel required>Organization Phone Number</FieldLabel><Input disabled={!canEdit} {...form.register('publisher_phone')} /><FieldError message={form.formState.errors.publisher_phone?.message} /></label>
+              <label className="block space-y-2">
+                <FieldLabel required>Name of Organization</FieldLabel>
+                <Input disabled={!canEdit} {...form.register('publisher_organisation_name')} />
+                <FieldError message={form.formState.errors.publisher_organisation_name?.message} />
+              </label>
+              <label className="block space-y-2">
+                <FieldLabel>Tax Identification Number</FieldLabel>
+                <Input disabled={!canEdit} {...form.register('publisher_tin')} />
+                <p className="text-xs text-slate-500 dark:text-slate-400">Optional.</p>
+                <FieldError message={form.formState.errors.publisher_tin?.message} />
+              </label>
+              <label className="block space-y-2 md:col-span-2">
+                <FieldLabel required>Location Address</FieldLabel>
+                <Input disabled={!canEdit} {...form.register('publisher_location_address')} />
+                <FieldError message={form.formState.errors.publisher_location_address?.message} />
+              </label>
+              <label className="block space-y-2 md:col-span-2">
+                <FieldLabel required>Postal Address</FieldLabel>
+                <Input disabled={!canEdit} {...form.register('publisher_postal_address')} />
+                <FieldError message={form.formState.errors.publisher_postal_address?.message} />
+              </label>
+              <label className="block space-y-2">
+                <FieldLabel required>Organization Email</FieldLabel>
+                <Input type="email" disabled={!canEdit} {...form.register('publisher_email')} />
+                <FieldError message={form.formState.errors.publisher_email?.message} />
+              </label>
+              <label className="block space-y-2">
+                <FieldLabel required>Organization Phone Number</FieldLabel>
+                <Input disabled={!canEdit} {...form.register('publisher_phone')} />
+                <FieldError message={form.formState.errors.publisher_phone?.message} />
+              </label>
             </>
           ) : null}
 
