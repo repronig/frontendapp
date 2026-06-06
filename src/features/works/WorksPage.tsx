@@ -84,7 +84,7 @@ type FileSelectionState = Record<WorkFileType, SelectedFileMeta | null>;
 
 const emptyFileSelections = (): FileSelectionState => workFileTypeOptions.reduce((acc, option) => ({ ...acc, [option.value]: null }), {} as FileSelectionState);
 const emptySelectedFiles = (): Record<WorkFileType, File | null> => workFileTypeOptions.reduce((acc, option) => ({ ...acc, [option.value]: null }), {} as Record<WorkFileType, File | null>);
-const emptyWorkDefaults = (): WorkFormValues => ({ type_of_work: 'educational_non_fiction_scientific_text', title: '', subtitle: '', publication_year: new Date().getFullYear(), synopsis: '', primary_language: 'English', work_format: 'digital_copy', identifier_type: 'isbn', identifier_value: '', doi: '', publisher_name: '', target_market: 'general_public', target_market_other: '', production_status: 'yes', agreement_accepted: false, date_of_consent: new Date().toISOString().slice(0, 10), other_work_type: '', notes: '' });
+const emptyWorkDefaults = (): WorkFormValues => ({ type_of_work: 'educational_non_fiction_scientific_text', title: '', subtitle: '', publication_year: new Date().getFullYear(), synopsis: '', primary_language: 'English', work_format: 'digital_copy', identifier_type: 'isbn', identifier_value: '', doi: '', publisher_name: '', target_market: 'general_public', target_market_other: '', production_status: 'yes', agreement_accepted: true, date_of_consent: new Date().toISOString().slice(0, 10), other_work_type: '', notes: '' });
 const emptyContributorDraft = (): ContributorEditorState => ({ member_id: undefined, contributor_name: '', contributor_role: 'Author', right_type: 'exclusive', ownership_percentage: 0, territory_scope: 'Nigeria' });
 
 function canEditWork(work?: WorkResource | null) {
